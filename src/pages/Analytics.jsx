@@ -457,7 +457,7 @@ function MonthlyView({
 
       {/* KPI Cards Row 1 — Primary */}
       {stats && (
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
           <KPICard
             icon={TrendingUp}
             label="Savings Rate"
@@ -503,7 +503,7 @@ function MonthlyView({
 
       {/* KPI Cards Row 2 — Additional */}
       {stats && (
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
           <KPICard
             icon={Zap}
             label="Expense Velocity"
@@ -552,29 +552,31 @@ function MonthlyView({
               No data for this month
             </div>
           ) : (
-            <div className="flex items-center gap-4">
-              <div className="w-1/2">
-                <ResponsiveContainer width="100%" height={220}>
-                  <PieChart>
-                    <Pie
-                      data={donutData}
-                      cx="50%"
-                      cy="50%"
-                      innerRadius={55}
-                      outerRadius={90}
-                      paddingAngle={3}
-                      dataKey="value"
-                      stroke="none"
-                    >
-                      {donutData.map((_, i) => (
-                        <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />
-                      ))}
-                    </Pie>
-                    <Tooltip content={<DonutTooltip />} />
-                  </PieChart>
-                </ResponsiveContainer>
+            <div className="flex flex-col sm:flex-row items-center gap-6">
+              <div className="w-full sm:w-1/2 flex justify-center">
+                <div className="w-full max-w-[200px]">
+                  <ResponsiveContainer width="100%" height={200}>
+                    <PieChart>
+                      <Pie
+                        data={donutData}
+                        cx="50%"
+                        cy="50%"
+                        innerRadius={50}
+                        outerRadius={75}
+                        paddingAngle={3}
+                        dataKey="value"
+                        stroke="none"
+                      >
+                        {donutData.map((_, i) => (
+                          <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />
+                        ))}
+                      </Pie>
+                      <Tooltip content={<DonutTooltip />} />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
               </div>
-              <div className="w-1/2 space-y-1.5 max-h-56 overflow-y-auto">
+              <div className="w-full sm:w-1/2 space-y-1.5 max-h-56 overflow-y-auto">
                 {donutData.map((d, i) => (
                   <div key={d.name} className="flex items-center gap-2 text-xs">
                     <div
@@ -707,7 +709,8 @@ function MonthlyView({
           />
         ) : (
           <>
-            <div className="overflow-x-auto">
+            {/* Desktop Table View */}
+            <div className="hidden md:block overflow-x-auto">
               <table className="data-table">
                 <thead>
                   <tr>
@@ -753,6 +756,42 @@ function MonthlyView({
                   ))}
                 </tbody>
               </table>
+            </div>
+
+            {/* Mobile Stacked Card View */}
+            <div className="md:hidden space-y-3">
+              {paginatedTxns.map((txn) => (
+                <div key={txn.id} className="p-4 rounded-xl border border-white/[0.06] bg-white/[0.02] space-y-2 relative">
+                  <div className="flex items-center justify-between">
+                    <span className="badge-accent">{getCategoryName(txn.category_id)}</span>
+                    <span className="font-bold text-expense-400">₹{fmt(Number(txn.amount))}</span>
+                  </div>
+                  {getSubcategoryName(txn.subcategory_id) && (
+                    <div className="text-xs text-surface-400">
+                      Sub-category: <span className="text-surface-300 font-medium">{getSubcategoryName(txn.subcategory_id)}</span>
+                    </div>
+                  )}
+                  <div className="text-[11px] text-surface-500 flex justify-between pr-6">
+                    <span>{format(new Date(txn.date), 'd MMM yy, h:mm a')}</span>
+                    <span>
+                      {txn.payment_method}
+                      {txn.credit_card_id ? ` · ${getCCName(txn.credit_card_id)}` : ''}
+                      {txn.account_id ? ` · ${getAccountName(txn.account_id)}` : ''}
+                    </span>
+                  </div>
+                  {txn.notes && (
+                    <p className="text-xs text-surface-600 border-t border-white/[0.04] pt-1.5 mt-1 pr-6">{txn.notes}</p>
+                  )}
+                  
+                  <button
+                    onClick={() => handleDeleteTxn(txn.id)}
+                    className="absolute right-3 bottom-3 text-surface-500 hover:text-expense-400 transition-colors"
+                    title="Delete"
+                  >
+                    <Trash2 size={14} />
+                  </button>
+                </div>
+              ))}
             </div>
 
             {totalPages > 1 && (
@@ -809,7 +848,7 @@ function YearlyView({ yearlyStats, annualAgg, lineData, categories, getCategoryN
 
       {/* Annual Summary Cards */}
       {annualAgg && (
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
           <KPICard
             icon={TrendingUp}
             label="Total Income"
@@ -836,82 +875,6 @@ function YearlyView({ yearlyStats, annualAgg, lineData, categories, getCategoryN
           />
         </div>
       )}
-
-      {/* Month-Wise Summary Table */}
-      <div className="glass-card-static p-6">
-        <h3 className="text-sm font-bold text-white mb-4">Month-Wise Summary (Apr → Mar)</h3>
-        <div className="overflow-x-auto">
-          <table className="data-table text-xs">
-            <thead>
-              <tr>
-                <th>Month</th>
-                <th className="text-right">Income</th>
-                <th className="text-right">Expenses</th>
-                <th className="text-right">Fixed Bills</th>
-                <th className="text-right">Savings</th>
-                <th className="text-right">Investment</th>
-                <th className="text-right">CC Paid</th>
-                <th className="text-right">Net</th>
-                <th className="text-right">Discretionary</th>
-                <th className="text-right">Mean Daily</th>
-                <th className="text-right">Median Txn</th>
-                <th className="text-right">Max Txn</th>
-                <th className="text-right">Savings Rate</th>
-              </tr>
-            </thead>
-            <tbody>
-              {yearlyStats.map((s) => {
-                const hasActivity = s.txnCount > 0 || s.totalIncome > 0;
-                return (
-                  <tr key={s.monthStart.toISOString()} className={!hasActivity ? 'opacity-30' : ''}>
-                    <td className="font-semibold text-white whitespace-nowrap">
-                      {format(s.monthStart, 'MMMM')}
-                    </td>
-                    <td className="text-right text-income-400">₹{fmt(s.totalIncome)}</td>
-                    <td className="text-right text-expense-400">₹{fmt(s.totalExpenses)}</td>
-                    <td className="text-right text-surface-300">₹{fmt(s.fixedBills)}</td>
-                    <td className="text-right text-surface-300">₹{fmt(s.savings)}</td>
-                    <td className="text-right text-surface-300">₹{fmt(s.investment)}</td>
-                    <td className="text-right text-surface-300">₹{fmt(s.ccPaid)}</td>
-                    <td className={`text-right font-semibold ${s.net >= 0 ? 'text-income-400' : 'text-expense-400'}`}>
-                      {s.net < 0 ? '-' : ''}₹{fmt(s.net)}
-                    </td>
-                    <td className="text-right text-accent-400">₹{fmt(s.discretionary)}</td>
-                    <td className="text-right text-surface-300">₹{fmt(s.meanDaily)}</td>
-                    <td className="text-right text-surface-300">₹{fmt(s.medianTxn)}</td>
-                    <td className="text-right text-surface-300">₹{fmt(s.maxTxn)}</td>
-                    <td className={`text-right font-semibold ${s.savingsRate >= 20 ? 'text-income-400' : s.savingsRate >= 0 ? 'text-accent-400' : 'text-expense-400'}`}>
-                      {s.savingsRate.toFixed(1)}%
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-            {/* Annual Totals Footer */}
-            {annualAgg && (
-              <tfoot>
-                <tr className="border-t-2 border-white/[0.1]">
-                  <td className="font-bold text-white">ANNUAL</td>
-                  <td className="text-right font-bold text-income-400">₹{fmt(annualAgg.totalIncome)}</td>
-                  <td className="text-right font-bold text-expense-400">₹{fmt(annualAgg.totalExpenses)}</td>
-                  <td className="text-right font-bold text-surface-300">₹{fmt(yearlyStats.reduce((s, m) => s + m.fixedBills, 0))}</td>
-                  <td className="text-right font-bold text-surface-300">₹{fmt(yearlyStats.reduce((s, m) => s + m.savings, 0))}</td>
-                  <td className="text-right font-bold text-surface-300">₹{fmt(yearlyStats.reduce((s, m) => s + m.investment, 0))}</td>
-                  <td className="text-right font-bold text-surface-300">₹{fmt(yearlyStats.reduce((s, m) => s + m.ccPaid, 0))}</td>
-                  <td className={`text-right font-bold ${(annualAgg.totalIncome - annualAgg.totalExpenses) >= 0 ? 'text-income-400' : 'text-expense-400'}`}>
-                    ₹{fmt(annualAgg.totalIncome - annualAgg.totalExpenses)}
-                  </td>
-                  <td className="text-right font-bold text-accent-400">₹{fmt(annualAgg.totalDiscretionary)}</td>
-                  <td className="text-right text-surface-400">—</td>
-                  <td className="text-right text-surface-400">—</td>
-                  <td className="text-right text-surface-400">—</td>
-                  <td className="text-right font-bold text-accent-400">{annualAgg.avgSavingsRate.toFixed(1)}%</td>
-                </tr>
-              </tfoot>
-            )}
-          </table>
-        </div>
-      </div>
 
       {/* Line Chart — Monthly Stats Trends */}
       <div className="glass-card-static p-6">
@@ -1023,6 +986,154 @@ function YearlyView({ yearlyStats, annualAgg, lineData, categories, getCategoryN
           </div>
         </div>
       )}
+
+      {/* Month-Wise Summary (Table on Desktop, Collapsible cards on Mobile) */}
+      <div className="glass-card-static p-6">
+        <h3 className="text-sm font-bold text-white mb-4">Month-Wise Summary (Apr → Mar)</h3>
+        
+        {/* Desktop Table View */}
+        <div className="hidden md:block overflow-x-auto">
+          <table className="data-table text-xs">
+            <thead>
+              <tr>
+                <th>Month</th>
+                <th className="text-right">Income</th>
+                <th className="text-right">Expenses</th>
+                <th className="text-right">Fixed Bills</th>
+                <th className="text-right">Savings</th>
+                <th className="text-right">Investment</th>
+                <th className="text-right">CC Paid</th>
+                <th className="text-right">Net</th>
+                <th className="text-right">Discretionary</th>
+                <th className="text-right">Mean Daily</th>
+                <th className="text-right">Median Txn</th>
+                <th className="text-right">Max Txn</th>
+                <th className="text-right">Savings Rate</th>
+              </tr>
+            </thead>
+            <tbody>
+              {yearlyStats.map((s) => {
+                const hasActivity = s.txnCount > 0 || s.totalIncome > 0;
+                return (
+                  <tr key={s.monthStart.toISOString()} className={!hasActivity ? 'opacity-30' : ''}>
+                    <td className="font-semibold text-white whitespace-nowrap">
+                      {format(s.monthStart, 'MMMM')}
+                    </td>
+                    <td className="text-right text-income-400">₹{fmt(s.totalIncome)}</td>
+                    <td className="text-right text-expense-400">₹{fmt(s.totalExpenses)}</td>
+                    <td className="text-right text-surface-300">₹{fmt(s.fixedBills)}</td>
+                    <td className="text-right text-surface-300">₹{fmt(s.savings)}</td>
+                    <td className="text-right text-surface-300">₹{fmt(s.investment)}</td>
+                    <td className="text-right text-surface-300">₹{fmt(s.ccPaid)}</td>
+                    <td className={`text-right font-semibold ${s.net >= 0 ? 'text-income-400' : 'text-expense-400'}`}>
+                      {s.net < 0 ? '-' : ''}₹{fmt(s.net)}
+                    </td>
+                    <td className="text-right text-accent-400">₹{fmt(s.discretionary)}</td>
+                    <td className="text-right text-surface-300">₹{fmt(s.meanDaily)}</td>
+                    <td className="text-right text-surface-300">₹{fmt(s.medianTxn)}</td>
+                    <td className="text-right text-surface-300">₹{fmt(s.maxTxn)}</td>
+                    <td className={`text-right font-semibold ${s.savingsRate >= 20 ? 'text-income-400' : s.savingsRate >= 0 ? 'text-accent-400' : 'text-expense-400'}`}>
+                      {s.savingsRate.toFixed(1)}%
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+            {annualAgg && (
+              <tfoot>
+                <tr className="border-t-2 border-white/[0.1]">
+                  <td className="font-bold text-white">ANNUAL</td>
+                  <td className="text-right font-bold text-income-400">₹{fmt(annualAgg.totalIncome)}</td>
+                  <td className="text-right font-bold text-expense-400">₹{fmt(annualAgg.totalExpenses)}</td>
+                  <td className="text-right font-bold text-surface-300">₹{fmt(yearlyStats.reduce((s, m) => s + m.fixedBills, 0))}</td>
+                  <td className="text-right font-bold text-surface-300">₹{fmt(yearlyStats.reduce((s, m) => s + m.savings, 0))}</td>
+                  <td className="text-right font-bold text-surface-300">₹{fmt(yearlyStats.reduce((s, m) => s + m.investment, 0))}</td>
+                  <td className="text-right font-bold text-surface-300">₹{fmt(yearlyStats.reduce((s, m) => s + m.ccPaid, 0))}</td>
+                  <td className={`text-right font-bold ${(annualAgg.totalIncome - annualAgg.totalExpenses) >= 0 ? 'text-income-400' : 'text-expense-400'}`}>
+                    ₹{fmt(annualAgg.totalIncome - annualAgg.totalExpenses)}
+                  </td>
+                  <td className="text-right font-bold text-accent-400">₹{fmt(annualAgg.totalDiscretionary)}</td>
+                  <td className="text-right text-surface-400">—</td>
+                  <td className="text-right text-surface-400">—</td>
+                  <td className="text-right text-surface-400">—</td>
+                  <td className="text-right font-bold text-accent-400">{annualAgg.avgSavingsRate.toFixed(1)}%</td>
+                </tr>
+              </tfoot>
+            )}
+          </table>
+        </div>
+
+        {/* Mobile Accordion View */}
+        <div className="md:hidden divide-y divide-white/[0.06]">
+          {yearlyStats.map((s) => {
+            const hasActivity = s.txnCount > 0 || s.totalIncome > 0;
+            return (
+              <details key={s.monthStart.toISOString()} className="group py-3 first:pt-0 last:pb-0" open={hasActivity && s.monthStart.getMonth() === new Date().getMonth()}>
+                <summary className="flex items-center justify-between cursor-pointer list-none outline-none">
+                  <div className="flex items-center gap-2">
+                    <span className="font-semibold text-white text-sm">{format(s.monthStart, 'MMMM')}</span>
+                    {!hasActivity && <span className="text-[10px] text-surface-600 font-medium">(Inactive)</span>}
+                  </div>
+                  <div className="flex items-center gap-3 text-xs font-semibold">
+                    {hasActivity && (
+                      <>
+                        <span className={s.net >= 0 ? 'text-income-400' : 'text-expense-400'}>
+                          {s.net < 0 ? '-' : ''}₹{Math.round(s.net).toLocaleString('en-IN')}
+                        </span>
+                        <span className="badge-neutral !py-0.5 !px-1.5 !text-[9px]">
+                          {s.savingsRate.toFixed(0)}% saved
+                        </span>
+                      </>
+                    )}
+                    <span className="text-surface-500 text-[10px] transition-transform duration-200 group-open:rotate-180">▼</span>
+                  </div>
+                </summary>
+
+                {hasActivity ? (
+                  <div className="grid grid-cols-2 gap-3 mt-3 pt-3 border-t border-white/[0.04] text-[11px]">
+                    <div>
+                      <p className="text-surface-500 mb-0.5">Income / Expenses</p>
+                      <p className="text-white font-medium">₹{fmt(s.totalIncome)} / <span className="text-expense-400">₹{fmt(s.totalExpenses)}</span></p>
+                    </div>
+                    <div>
+                      <p className="text-surface-500 mb-0.5">Net Position</p>
+                      <p className={`font-bold ${s.net >= 0 ? 'text-income-400' : 'text-expense-400'}`}>
+                        {s.net < 0 ? '-' : ''}₹{fmt(s.net)}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-surface-500 mb-0.5">Fixed Bills</p>
+                      <p className="text-surface-300 font-medium">₹{fmt(s.fixedBills)}</p>
+                    </div>
+                    <div>
+                      <p className="text-surface-500 mb-0.5">Discretionary Spend</p>
+                      <p className="text-accent-400 font-medium">₹{fmt(s.discretionary)}</p>
+                    </div>
+                    <div>
+                      <p className="text-surface-500 mb-0.5">Savings / Investments</p>
+                      <p className="text-surface-300 font-medium">₹{fmt(s.savings)} / ₹{fmt(s.investment)}</p>
+                    </div>
+                    <div>
+                      <p className="text-surface-500 mb-0.5">Credit Card Paid</p>
+                      <p className="text-surface-300 font-medium">₹{fmt(s.ccPaid)}</p>
+                    </div>
+                    <div>
+                      <p className="text-surface-500 mb-0.5">Daily Avg / Median</p>
+                      <p className="text-surface-300 font-medium">₹{fmt(s.meanDaily)} / ₹{fmt(s.medianTxn)}</p>
+                    </div>
+                    <div>
+                      <p className="text-surface-500 mb-0.5">Largest Transaction</p>
+                      <p className="text-expense-400 font-medium">₹{fmt(s.maxTxn)}</p>
+                    </div>
+                  </div>
+                ) : (
+                  <p className="text-[11px] text-surface-600 mt-2">No activity logged for this month.</p>
+                )}
+              </details>
+            );
+          })}
+        </div>
+      </div>
     </div>
   );
 }

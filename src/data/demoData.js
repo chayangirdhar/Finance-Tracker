@@ -56,6 +56,7 @@ export const DEMO_ACCOUNTS = [
   { id: 1, name: 'HDFC Savings', type: 'Bank', opening_balance: 85000 },
   { id: 2, name: 'Paytm Wallet', type: 'Wallet', opening_balance: 2500 },
   { id: 3, name: 'Cash', type: 'Cash', opening_balance: 5000 },
+  { id: 4, name: 'Salary Account', type: 'Bank', opening_balance: 0 },
 ];
 
 export const DEMO_CREDIT_CARDS = [

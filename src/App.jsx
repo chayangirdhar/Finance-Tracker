@@ -5,6 +5,7 @@ import { AppProvider, useApp } from './context/AppContext';
 import { DemoProvider } from './context/DemoContext';
 import Sidebar from './components/layout/Sidebar';
 import TopBar from './components/layout/TopBar';
+import MobileNav from './components/layout/MobileNav';
 import DemoBanner from './components/shared/DemoBanner';
 import ExpenseLogger from './pages/ExpenseLogger';
 import IncomeLogger from './pages/IncomeLogger';
@@ -30,8 +31,8 @@ function AppLayout() {
   return (
     <div className="flex min-h-screen">
       <Sidebar />
-      {/* Main content area — with sidebar offset */}
-      <div className="flex-1 ml-[72px] lg:ml-[260px] transition-all duration-300">
+      {/* Main content area — with responsive sidebar offset and mobile bottom padding */}
+      <div className="flex-1 min-w-0 ml-0 md:ml-[72px] lg:ml-[260px] pb-20 md:pb-0 transition-all duration-300">
         <TopBar />
         {!isAuthenticated && <DemoBanner />}
         <main className="p-6">
@@ -43,6 +44,7 @@ function AppLayout() {
           </Routes>
         </main>
       </div>
+      <MobileNav />
     </div>
   );
 }

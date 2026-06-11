@@ -188,46 +188,89 @@ export default function FinancialHealth() {
             ) : null}
           />
         ) : (
-          <div className="overflow-x-auto">
-            <table className="data-table">
-              <thead>
-                <tr>
-                  <th>Account</th>
-                  <th>Type</th>
-                  <th className="text-right">Opening Balance</th>
-                  <th className="text-right">
-                    <span className="flex items-center justify-end gap-1">
-                      <ArrowUpRight size={12} className="text-income-400" /> Income In
-                    </span>
-                  </th>
-                  <th className="text-right">
-                    <span className="flex items-center justify-end gap-1">
-                      <ArrowDownRight size={12} className="text-expense-400" /> Expenses Out
-                    </span>
-                  </th>
-                  <th className="text-right">Live Balance</th>
-                </tr>
-              </thead>
-              <tbody>
-                {accounts.map((acc) => {
-                  const stats = accountStats[acc.id] || {};
-                  const balance = stats.liveBalance ?? Number(acc.opening_balance);
-                  return (
-                    <tr key={acc.id}>
-                      <td className="font-semibold text-white">{acc.name}</td>
-                      <td><span className="badge-neutral">{acc.type}</span></td>
-                      <td className="text-right text-surface-300">₹{fmt(Number(acc.opening_balance))}</td>
-                      <td className="text-right text-income-400">+₹{fmt(stats.incomeIn || 0)}</td>
-                      <td className="text-right text-expense-400">-₹{fmt(stats.expensesOut || 0)}</td>
-                      <td className={`text-right font-bold ${balance >= 0 ? 'text-income-400' : 'text-expense-400'}`}>
-                        ₹{fmt(balance)}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+          <>
+            {/* Desktop Table View */}
+            <div className="hidden md:block overflow-x-auto">
+              <table className="data-table">
+                <thead>
+                  <tr>
+                    <th>Account</th>
+                    <th>Type</th>
+                    <th className="text-right">Opening Balance</th>
+                    <th className="text-right">
+                      <span className="flex items-center justify-end gap-1">
+                        <ArrowUpRight size={12} className="text-income-400" /> Income In
+                      </span>
+                    </th>
+                    <th className="text-right">
+                      <span className="flex items-center justify-end gap-1">
+                        <ArrowDownRight size={12} className="text-expense-400" /> Expenses Out
+                      </span>
+                    </th>
+                    <th className="text-right">Live Balance</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {accounts.map((acc) => {
+                    const stats = accountStats[acc.id] || {};
+                    const balance = stats.liveBalance ?? Number(acc.opening_balance);
+                    return (
+                      <tr key={acc.id}>
+                        <td className="font-semibold text-white">{acc.name}</td>
+                        <td><span className="badge-neutral">{acc.type}</span></td>
+                        <td className="text-right text-surface-300">₹{fmt(Number(acc.opening_balance))}</td>
+                        <td className="text-right text-income-400">+₹{fmt(stats.incomeIn || 0)}</td>
+                        <td className="text-right text-expense-400">-₹{fmt(stats.expensesOut || 0)}</td>
+                        <td className={`text-right font-bold ${balance >= 0 ? 'text-income-400' : 'text-expense-400'}`}>
+                          ₹{fmt(balance)}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Mobile Stacked Card View */}
+            <div className="md:hidden space-y-3">
+              {accounts.map((acc) => {
+                const stats = accountStats[acc.id] || {};
+                const balance = stats.liveBalance ?? Number(acc.opening_balance);
+                return (
+                  <div key={acc.id} className="p-4 rounded-xl border border-white/[0.06] bg-white/[0.02] space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="font-semibold text-white text-sm">{acc.name}</span>
+                      <span className="badge-neutral !text-[10px]">{acc.type}</span>
+                    </div>
+                    <div className="grid grid-cols-2 gap-3 text-xs">
+                      <div>
+                        <p className="text-surface-500 mb-0.5">Opening Balance</p>
+                        <p className="text-surface-300 font-medium">₹{fmt(Number(acc.opening_balance))}</p>
+                      </div>
+                      <div>
+                        <p className="text-surface-500 mb-0.5">Live Balance</p>
+                        <p className={`font-bold ${balance >= 0 ? 'text-income-400' : 'text-expense-400'}`}>
+                          ₹{fmt(balance)}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-surface-500 mb-0.5 flex items-center gap-0.5">
+                          <ArrowUpRight size={10} className="text-income-400" /> Income In
+                        </p>
+                        <p className="text-income-400 font-medium">+₹{fmt(stats.incomeIn || 0)}</p>
+                      </div>
+                      <div>
+                        <p className="text-surface-500 mb-0.5 flex items-center gap-0.5">
+                          <ArrowDownRight size={10} className="text-expense-400" /> Expenses Out
+                        </p>
+                        <p className="text-expense-400 font-medium">-₹{fmt(stats.expensesOut || 0)}</p>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </>
         )}
       </div>
 
@@ -262,61 +305,126 @@ export default function FinancialHealth() {
             ) : null}
           />
         ) : (
-          <div className="overflow-x-auto">
-            <table className="data-table">
-              <thead>
-                <tr>
-                  <th>Card</th>
-                  <th className="text-right">Credit Limit</th>
-                  <th className="text-right">Opening Dues</th>
-                  <th className="text-right">Card Spend</th>
-                  <th className="text-right">Payments Made</th>
-                  <th className="text-right">Total Owed</th>
-                  <th className="text-right">Available</th>
-                </tr>
-              </thead>
-              <tbody>
-                {creditCards.map((cc) => {
-                  const stats = cardStats[cc.id] || {};
-                  const owed = stats.owedDues ?? Number(cc.opening_dues);
-                  const avail = stats.available ?? (Number(cc.credit_limit) - Number(cc.opening_dues));
-                  const utilPct = Number(cc.credit_limit) > 0
-                    ? Math.round((owed / Number(cc.credit_limit)) * 100)
-                    : 0;
+          <>
+            {/* Desktop Table View */}
+            <div className="hidden md:block overflow-x-auto">
+              <table className="data-table">
+                <thead>
+                  <tr>
+                    <th>Card</th>
+                    <th className="text-right">Credit Limit</th>
+                    <th className="text-right">Opening Dues</th>
+                    <th className="text-right">Card Spend</th>
+                    <th className="text-right">Payments Made</th>
+                    <th className="text-right">Total Owed</th>
+                    <th className="text-right">Available</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {creditCards.map((cc) => {
+                    const stats = cardStats[cc.id] || {};
+                    const owed = stats.owedDues ?? Number(cc.opening_dues);
+                    const avail = stats.available ?? (Number(cc.credit_limit) - Number(cc.opening_dues));
+                    const utilPct = Number(cc.credit_limit) > 0
+                      ? Math.round((owed / Number(cc.credit_limit)) * 100)
+                      : 0;
 
-                  return (
-                    <tr key={cc.id}>
-                      <td>
-                        <div>
-                          <span className="font-semibold text-white">{cc.name}</span>
-                          <div className="mt-1 w-full bg-white/[0.06] rounded-full h-1.5">
-                            <div
-                              className="h-1.5 rounded-full transition-all duration-500"
-                              style={{
-                                width: `${Math.min(utilPct, 100)}%`,
-                                background: utilPct > 80 ? 'var(--gradient-expense)' : utilPct > 50 ? '#f59e0b' : 'var(--gradient-income)',
-                              }}
-                            />
+                    return (
+                      <tr key={cc.id}>
+                        <td>
+                          <div>
+                            <span className="font-semibold text-white">{cc.name}</span>
+                            <div className="mt-1 w-full bg-white/[0.06] rounded-full h-1.5">
+                              <div
+                                className="h-1.5 rounded-full transition-all duration-500"
+                                style={{
+                                  width: `${Math.min(utilPct, 100)}%`,
+                                  background: utilPct > 80 ? 'var(--gradient-expense)' : utilPct > 50 ? '#f59e0b' : 'var(--gradient-income)',
+                                }}
+                              />
+                            </div>
+                            <span className="text-[10px] text-surface-500">{utilPct}% utilized</span>
                           </div>
-                          <span className="text-[10px] text-surface-500">{utilPct}% utilized</span>
-                        </div>
-                      </td>
-                      <td className="text-right text-surface-300">₹{fmt(Number(cc.credit_limit))}</td>
-                      <td className="text-right text-surface-400">₹{fmt(Number(cc.opening_dues))}</td>
-                      <td className="text-right text-expense-400">₹{fmt(stats.cardSpend || 0)}</td>
-                      <td className="text-right text-income-400">₹{fmt(stats.billPayments || 0)}</td>
-                      <td className={`text-right font-bold ${owed > 0 ? 'text-expense-400' : 'text-income-400'}`}>
-                        ₹{fmt(owed)}
-                      </td>
-                      <td className={`text-right font-bold ${avail >= 0 ? 'text-income-400' : 'text-expense-400'}`}>
-                        ₹{fmt(avail)}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+                        </td>
+                        <td className="text-right text-surface-300">₹{fmt(Number(cc.credit_limit))}</td>
+                        <td className="text-right text-surface-400">₹{fmt(Number(cc.opening_dues))}</td>
+                        <td className="text-right text-expense-400">₹{fmt(stats.cardSpend || 0)}</td>
+                        <td className="text-right text-income-400">₹{fmt(stats.billPayments || 0)}</td>
+                        <td className={`text-right font-bold ${owed > 0 ? 'text-expense-400' : 'text-income-400'}`}>
+                          ₹{fmt(owed)}
+                        </td>
+                        <td className={`text-right font-bold ${avail >= 0 ? 'text-income-400' : 'text-expense-400'}`}>
+                          ₹{fmt(avail)}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Mobile Stacked Card View */}
+            <div className="md:hidden space-y-3">
+              {creditCards.map((cc) => {
+                const stats = cardStats[cc.id] || {};
+                const owed = stats.owedDues ?? Number(cc.opening_dues);
+                const avail = stats.available ?? (Number(cc.credit_limit) - Number(cc.opening_dues));
+                const utilPct = Number(cc.credit_limit) > 0
+                  ? Math.round((owed / Number(cc.credit_limit)) * 100)
+                  : 0;
+
+                return (
+                  <div key={cc.id} className="p-4 rounded-xl border border-white/[0.06] bg-white/[0.02] space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <span className="font-semibold text-white text-sm">{cc.name}</span>
+                        <p className="text-[10px] text-surface-500 mt-0.5">{utilPct}% utilized</p>
+                      </div>
+                      <div className="w-24 bg-white/[0.06] rounded-full h-1.5 flex-shrink-0">
+                        <div
+                          className="h-1.5 rounded-full transition-all duration-500"
+                          style={{
+                            width: `${Math.min(utilPct, 100)}%`,
+                            background: utilPct > 80 ? 'var(--gradient-expense)' : utilPct > 50 ? '#f59e0b' : 'var(--gradient-income)',
+                          }}
+                        />
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-3 text-xs">
+                      <div>
+                        <p className="text-surface-500 mb-0.5">Credit Limit</p>
+                        <p className="text-surface-300 font-medium">₹{fmt(Number(cc.credit_limit))}</p>
+                      </div>
+                      <div>
+                        <p className="text-surface-500 mb-0.5">Total Owed</p>
+                        <p className={`font-bold ${owed > 0 ? 'text-expense-400' : 'text-income-400'}`}>
+                          ₹{fmt(owed)}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-surface-500 mb-0.5">Card Spend</p>
+                        <p className="text-expense-400 font-medium">₹{fmt(stats.cardSpend || 0)}</p>
+                      </div>
+                      <div>
+                        <p className="text-surface-500 mb-0.5">Available Limit</p>
+                        <p className={`font-bold ${avail >= 0 ? 'text-income-400' : 'text-expense-400'}`}>
+                          ₹{fmt(avail)}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-surface-500 mb-0.5">Opening Dues</p>
+                        <p className="text-surface-400 font-medium">₹{fmt(Number(cc.opening_dues))}</p>
+                      </div>
+                      <div>
+                        <p className="text-surface-500 mb-0.5">Payments Made</p>
+                        <p className="text-income-400 font-medium">₹{fmt(stats.billPayments || 0)}</p>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </>
         )}
       </div>
 

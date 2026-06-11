@@ -110,17 +110,17 @@ export default function IncomeLogger() {
       {/* Right: Monthly summary + list */}
       <div className="lg:col-span-3">
         {/* Month picker */}
-        <div className="glass-card-static p-4 mb-4 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Calendar size={16} className="text-income-400" />
+        <div className="glass-card-static p-4 mb-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div className="flex items-center gap-3 w-full sm:w-auto">
+            <Calendar size={16} className="text-income-400 flex-shrink-0" />
             <input
               type="month"
               value={selectedMonth}
               onChange={(e) => setSelectedMonth(e.target.value)}
-              className="input-glass !w-auto !py-1.5 !px-3 !text-sm"
+              className="input-glass !w-full sm:!w-auto !py-1.5 !px-3 !text-sm"
             />
           </div>
-          <div className="text-right">
+          <div className="text-left sm:text-right w-full sm:w-auto border-t border-white/[0.04] pt-2 sm:pt-0 sm:border-none">
             <p className="text-xs text-surface-500">Total Income</p>
             <p className="text-xl font-bold text-gradient-income">
               ₹{monthTotal.toLocaleString('en-IN', { minimumFractionDigits: 2 })}

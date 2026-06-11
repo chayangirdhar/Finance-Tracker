@@ -1,19 +1,21 @@
 import { useState, useEffect } from 'react';
 import { format } from 'date-fns';
-import { Calendar, TrendingUp, TrendingDown, Settings } from 'lucide-react';
+import { Calendar, TrendingUp, TrendingDown, Settings, Lock, LogOut } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../context/AuthContext';
 import { useDemoData } from '../../context/DemoContext';
 import Modal from '../shared/Modal';
+import LoginModal from '../shared/LoginModal';
 import AccountForm from '../forms/AccountForm';
 import CreditCardForm from '../forms/CreditCardForm';
 import { useApp } from '../../context/AppContext';
 
 export default function TopBar() {
   const { accounts, creditCards } = useApp();
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, signOut } = useAuth();
   const demoData = useDemoData();
   const [showSettings, setShowSettings] = useState(false);
+  const [showLogin, setShowLogin] = useState(false);
   const [quickStats, setQuickStats] = useState({ income: 0, expenses: 0 });
 
   const now = new Date();
@@ -107,13 +109,37 @@ export default function TopBar() {
           </div>
         </div>
 
-        {/* Right: Settings */}
-        <button
-          onClick={() => setShowSettings(true)}
-          className="w-9 h-9 rounded-xl flex items-center justify-center text-surface-400 hover:text-white hover:bg-white/[0.06] transition-all"
-        >
-          <Settings size={18} />
-        </button>
+        {/* Right: Actions */}
+        <div className="flex items-center gap-2">
+          {/* Mobile Auth Button */}
+          <div className="md:hidden">
+            {isAuthenticated ? (
+              <button
+                onClick={signOut}
+                className="w-9 h-9 rounded-xl flex items-center justify-center text-income-400 hover:bg-white/[0.06] transition-all"
+                title="Sign out"
+              >
+                <LogOut size={16} />
+              </button>
+            ) : (
+              <button
+                onClick={() => setShowLogin(true)}
+                className="w-9 h-9 rounded-xl flex items-center justify-center text-surface-400 hover:bg-white/[0.06] transition-all"
+                title="Owner Login"
+              >
+                <Lock size={16} />
+              </button>
+            )}
+          </div>
+
+          <button
+            onClick={() => setShowSettings(true)}
+            className="w-9 h-9 rounded-xl flex items-center justify-center text-surface-400 hover:text-white hover:bg-white/[0.06] transition-all"
+            title="Settings"
+          >
+            <Settings size={18} />
+          </button>
+        </div>
       </header>
 
       {/* Settings Modal */}
@@ -125,6 +151,9 @@ export default function TopBar() {
       >
         <SettingsPanel />
       </Modal>
+
+      {/* Login Modal */}
+      <LoginModal isOpen={showLogin} onClose={() => setShowLogin(false)} />
     </>
   );
 }
