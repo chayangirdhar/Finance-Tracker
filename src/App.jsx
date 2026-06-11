@@ -1,8 +1,11 @@
 import { HashRouter, Routes, Route } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
+import { AuthProvider, useAuth } from './context/AuthContext';
 import { AppProvider, useApp } from './context/AppContext';
+import { DemoProvider } from './context/DemoContext';
 import Sidebar from './components/layout/Sidebar';
 import TopBar from './components/layout/TopBar';
+import DemoBanner from './components/shared/DemoBanner';
 import ExpenseLogger from './pages/ExpenseLogger';
 import IncomeLogger from './pages/IncomeLogger';
 import FinancialHealth from './pages/FinancialHealth';
@@ -11,6 +14,7 @@ import { Loader2 } from 'lucide-react';
 
 function AppLayout() {
   const { loading } = useApp();
+  const { isAuthenticated } = useAuth();
 
   if (loading) {
     return (
@@ -29,6 +33,7 @@ function AppLayout() {
       {/* Main content area — with sidebar offset */}
       <div className="flex-1 ml-[72px] lg:ml-[260px] transition-all duration-300">
         <TopBar />
+        {!isAuthenticated && <DemoBanner />}
         <main className="p-6">
           <Routes>
             <Route path="/" element={<ExpenseLogger />} />
@@ -42,11 +47,41 @@ function AppLayout() {
   );
 }
 
+/**
+ * Gate that checks auth state and renders the appropriate data provider.
+ * Authenticated → AppProvider (Supabase)
+ * Guest → DemoProvider (sessionStorage-backed demo data)
+ */
+function AuthGate() {
+  const { isAuthenticated, isLoading } = useAuth();
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center animate-pulse">
+          <Loader2 size={32} className="text-accent-400 mx-auto mb-4 animate-spin" />
+          <p className="text-sm text-surface-400 font-medium">Checking authentication…</p>
+        </div>
+      </div>
+    );
+  }
+
+  return isAuthenticated ? (
+    <AppProvider>
+      <AppLayout />
+    </AppProvider>
+  ) : (
+    <DemoProvider>
+      <AppLayout />
+    </DemoProvider>
+  );
+}
+
 export default function App() {
   return (
     <HashRouter>
-      <AppProvider>
-        <AppLayout />
+      <AuthProvider>
+        <AuthGate />
         <Toaster
           position="bottom-right"
           toastOptions={{
@@ -72,7 +107,7 @@ export default function App() {
             },
           }}
         />
-      </AppProvider>
+      </AuthProvider>
     </HashRouter>
   );
 }

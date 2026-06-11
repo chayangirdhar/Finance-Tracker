@@ -1,6 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
 import { useApp } from '../context/AppContext';
+import { useAuth } from '../context/AuthContext';
+import { useDemoData } from '../context/DemoContext';
 import ExpenseForm from '../components/forms/ExpenseForm';
 import EmptyState from '../components/shared/EmptyState';
 import { format, isToday, isYesterday } from 'date-fns';
@@ -9,10 +11,14 @@ import toast from 'react-hot-toast';
 
 export default function ExpenseLogger() {
   const { categories, subcategories, accounts, creditCards } = useApp();
+  const { isAuthenticated } = useAuth();
+  const demoData = useDemoData();
   const [transactions, setTransactions] = useState([]);
   const [loading, setLoading] = useState(true);
 
+  // Fetch from Supabase (authenticated mode)
   const fetchRecent = useCallback(async () => {
+    if (!isAuthenticated) return;
     try {
       const today = new Date();
       const threeDaysAgo = new Date(today);
@@ -32,7 +38,22 @@ export default function ExpenseLogger() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [isAuthenticated]);
+
+  // Demo mode: reactively sync from DemoContext
+  useEffect(() => {
+    if (!isAuthenticated && demoData) {
+      const today = new Date();
+      const threeDaysAgo = new Date(today);
+      threeDaysAgo.setDate(today.getDate() - 3);
+      const filtered = demoData.transactions
+        .filter((t) => new Date(t.date) >= threeDaysAgo)
+        .sort((a, b) => new Date(b.date) - new Date(a.date))
+        .slice(0, 50);
+      setTransactions(filtered);
+      setLoading(false);
+    }
+  }, [isAuthenticated, demoData?.transactions]);
 
   useEffect(() => {
     fetchRecent();
@@ -41,10 +62,14 @@ export default function ExpenseLogger() {
   const handleDelete = async (id) => {
     if (!confirm('Delete this transaction?')) return;
     try {
-      const { error } = await supabase.from('transactions').delete().eq('id', id);
-      if (error) throw error;
+      if (isAuthenticated) {
+        const { error } = await supabase.from('transactions').delete().eq('id', id);
+        if (error) throw error;
+        fetchRecent();
+      } else {
+        demoData.deleteTransaction(id);
+      }
       toast.success('Transaction deleted');
-      fetchRecent();
     } catch (err) {
       toast.error('Failed to delete');
     }

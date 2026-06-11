@@ -7,8 +7,11 @@ import {
   ChevronLeft,
   ChevronRight,
   IndianRupee,
+  Lock,
 } from 'lucide-react';
 import { useState } from 'react';
+import { useAuth } from '../../context/AuthContext';
+import LoginModal from '../shared/LoginModal';
 
 const navItems = [
   { to: '/', icon: Receipt, label: 'Expenses', description: 'Daily Logger' },
@@ -19,6 +22,8 @@ const navItems = [
 
 export default function Sidebar() {
   const [collapsed, setCollapsed] = useState(false);
+  const [showLogin, setShowLogin] = useState(false);
+  const { isAuthenticated, signOut } = useAuth();
   const location = useLocation();
 
   return (
@@ -91,6 +96,36 @@ export default function Sidebar() {
         })}
       </nav>
 
+      {/* Auth Section */}
+      <div className="px-3 py-2 border-t border-white/[0.06]">
+        {isAuthenticated ? (
+          <div className="flex items-center gap-2 px-3 py-2">
+            <div className="w-2 h-2 rounded-full bg-income-400 flex-shrink-0 animate-pulse" />
+            {!collapsed && (
+              <div className="flex-1 flex items-center justify-between animate-fade-in">
+                <span className="text-[10px] text-surface-500 font-medium">Connected</span>
+                <button
+                  onClick={signOut}
+                  className="text-[10px] text-surface-600 hover:text-surface-400 transition-colors"
+                >
+                  Sign out
+                </button>
+              </div>
+            )}
+          </div>
+        ) : (
+          <button
+            onClick={() => setShowLogin(true)}
+            className="w-full flex items-center gap-3 px-3 py-2 rounded-xl text-surface-500 hover:text-surface-300 hover:bg-white/[0.04] transition-all"
+          >
+            <Lock size={14} />
+            {!collapsed && (
+              <span className="text-[10px] font-medium animate-fade-in">Owner Login</span>
+            )}
+          </button>
+        )}
+      </div>
+
       {/* Collapse Toggle */}
       <button
         onClick={() => setCollapsed(!collapsed)}
@@ -98,6 +133,9 @@ export default function Sidebar() {
       >
         {collapsed ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
       </button>
+
+      {/* Login Modal */}
+      <LoginModal isOpen={showLogin} onClose={() => setShowLogin(false)} />
     </aside>
   );
 }

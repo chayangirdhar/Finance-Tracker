@@ -1,6 +1,8 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { supabase } from '../lib/supabase';
 import { useApp } from '../context/AppContext';
+import { useAuth } from '../context/AuthContext';
+import { useDemoData } from '../context/DemoContext';
 import EmptyState from '../components/shared/EmptyState';
 import { format, startOfMonth, endOfMonth, subMonths, parseISO, eachDayOfInterval } from 'date-fns';
 import {
@@ -60,6 +62,8 @@ const PAGE_SIZE = 25;
 
 export default function Analytics() {
   const { categories, subcategories, accounts, creditCards } = useApp();
+  const { isAuthenticated } = useAuth();
+  const demoData = useDemoData();
   const [allTxns, setAllTxns] = useState([]);
   const [allIncome, setAllIncome] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -74,6 +78,7 @@ export default function Analytics() {
   const [chartMonth, setChartMonth] = useState(format(new Date(), 'yyyy-MM'));
 
   const fetchData = useCallback(async () => {
+    if (!isAuthenticated) return;
     try {
       setLoading(true);
       const [txnRes, incRes] = await Promise.all([
@@ -89,9 +94,21 @@ export default function Analytics() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [isAuthenticated]);
 
-  useEffect(() => { fetchData(); }, [fetchData]);
+  useEffect(() => {
+    if (isAuthenticated) {
+      fetchData();
+    }
+  }, [fetchData, isAuthenticated]);
+
+  useEffect(() => {
+    if (!isAuthenticated && demoData) {
+      setAllTxns(demoData.transactions || []);
+      setAllIncome(demoData.income || []);
+      setLoading(false);
+    }
+  }, [isAuthenticated, demoData?.transactions, demoData?.income]);
 
   // ─── Category ID lookups ──────────────────────────────────────
   const catOpts = useMemo(() => {
@@ -284,10 +301,14 @@ export default function Analytics() {
   const handleDeleteTxn = async (id) => {
     if (!confirm('Delete this transaction?')) return;
     try {
-      const { error } = await supabase.from('transactions').delete().eq('id', id);
-      if (error) throw error;
+      if (isAuthenticated) {
+        const { error } = await supabase.from('transactions').delete().eq('id', id);
+        if (error) throw error;
+        fetchData();
+      } else if (demoData) {
+        demoData.deleteTransaction(id);
+      }
       toast.success('Deleted');
-      fetchData();
     } catch {
       toast.error('Failed to delete');
     }

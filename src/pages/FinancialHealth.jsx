@@ -1,6 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
 import { useApp } from '../context/AppContext';
+import { useAuth } from '../context/AuthContext';
+import { useDemoData } from '../context/DemoContext';
 import Modal from '../components/shared/Modal';
 import AccountForm from '../components/forms/AccountForm';
 import CreditCardForm from '../components/forms/CreditCardForm';
@@ -19,6 +21,8 @@ import {
 
 export default function FinancialHealth() {
   const { accounts, creditCards, refreshAccounts, refreshCreditCards, getCategoryByName } = useApp();
+  const { isAuthenticated } = useAuth();
+  const demoData = useDemoData();
 
   const [accountStats, setAccountStats] = useState({});
   const [cardStats, setCardStats] = useState({});
@@ -30,11 +34,21 @@ export default function FinancialHealth() {
     try {
       setLoading(true);
 
-      // Fetch all income entries
-      const { data: allIncome } = await supabase.from('income').select('amount, account_id');
+      let allIncome = [];
+      let allTxns = [];
 
-      // Fetch all transactions
-      const { data: allTxns } = await supabase.from('transactions').select('amount, payment_method, account_id, credit_card_id, category_id, cc_payment_type');
+      if (isAuthenticated) {
+        // Fetch all income entries
+        const { data: incomeData } = await supabase.from('income').select('amount, account_id');
+        allIncome = incomeData || [];
+
+        // Fetch all transactions
+        const { data: txnsData } = await supabase.from('transactions').select('amount, payment_method, account_id, credit_card_id, category_id, cc_payment_type');
+        allTxns = txnsData || [];
+      } else if (demoData) {
+        allIncome = demoData.income || [];
+        allTxns = demoData.transactions || [];
+      }
 
       // Get the "Credit Card Payment" category
       const ccPayCat = getCategoryByName('Credit Card Payment');
@@ -155,9 +169,11 @@ export default function FinancialHealth() {
               <p className="text-xs text-surface-500">Real-time balance tracking</p>
             </div>
           </div>
-          <button onClick={() => setShowAccountForm(true)} className="btn-primary !py-2 !px-4 !text-xs">
-            <Plus size={14} className="inline mr-1" /> Add Account
-          </button>
+          {isAuthenticated && (
+            <button onClick={() => setShowAccountForm(true)} className="btn-primary !py-2 !px-4 !text-xs">
+              <Plus size={14} className="inline mr-1" /> Add Account
+            </button>
+          )}
         </div>
 
         {accounts.length === 0 ? (
@@ -165,11 +181,11 @@ export default function FinancialHealth() {
             icon={Landmark}
             title="No accounts configured"
             description="Add your savings accounts, wallets, and cash accounts to start tracking balances"
-            action={
+            action={isAuthenticated ? (
               <button onClick={() => setShowAccountForm(true)} className="btn-primary !text-xs">
                 Add Your First Account
               </button>
-            }
+            ) : null}
           />
         ) : (
           <div className="overflow-x-auto">
@@ -227,9 +243,11 @@ export default function FinancialHealth() {
               <p className="text-xs text-surface-500">Dues & available limits</p>
             </div>
           </div>
-          <button onClick={() => setShowCardForm(true)} className="btn-primary !py-2 !px-4 !text-xs">
-            <Plus size={14} className="inline mr-1" /> Add Card
-          </button>
+          {isAuthenticated && (
+            <button onClick={() => setShowCardForm(true)} className="btn-primary !py-2 !px-4 !text-xs">
+              <Plus size={14} className="inline mr-1" /> Add Card
+            </button>
+          )}
         </div>
 
         {creditCards.length === 0 ? (
@@ -237,11 +255,11 @@ export default function FinancialHealth() {
             icon={CreditCard}
             title="No credit cards added"
             description="Add your credit cards to track spending and remaining limits"
-            action={
+            action={isAuthenticated ? (
               <button onClick={() => setShowCardForm(true)} className="btn-primary !text-xs">
                 Add Your First Card
               </button>
-            }
+            ) : null}
           />
         ) : (
           <div className="overflow-x-auto">

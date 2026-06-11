@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react';
 import { format } from 'date-fns';
 import { Calendar, TrendingUp, TrendingDown, Settings } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
+import { useAuth } from '../../context/AuthContext';
+import { useDemoData } from '../../context/DemoContext';
 import Modal from '../shared/Modal';
 import AccountForm from '../forms/AccountForm';
 import CreditCardForm from '../forms/CreditCardForm';
@@ -9,6 +11,8 @@ import { useApp } from '../../context/AppContext';
 
 export default function TopBar() {
   const { accounts, creditCards } = useApp();
+  const { isAuthenticated } = useAuth();
+  const demoData = useDemoData();
   const [showSettings, setShowSettings] = useState(false);
   const [quickStats, setQuickStats] = useState({ income: 0, expenses: 0 });
 
@@ -17,6 +21,27 @@ export default function TopBar() {
   const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59).toISOString();
 
   useEffect(() => {
+    // Demo mode: compute from demo data
+    if (!isAuthenticated && demoData) {
+      const mStart = new Date(now.getFullYear(), now.getMonth(), 1);
+      const mEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
+      const totalIncome = (demoData.income || [])
+        .filter((i) => {
+          const d = new Date(i.date);
+          return d >= mStart && d <= mEnd;
+        })
+        .reduce((s, i) => s + Number(i.amount), 0);
+      const totalExpenses = (demoData.transactions || [])
+        .filter((t) => {
+          const d = new Date(t.date);
+          return d >= mStart && d <= mEnd;
+        })
+        .reduce((s, t) => s + Number(t.amount), 0);
+      setQuickStats({ income: totalIncome, expenses: totalExpenses });
+      return;
+    }
+
+    // Authenticated: fetch from Supabase
     async function fetchQuickStats() {
       try {
         const [incRes, expRes] = await Promise.all([
@@ -40,7 +65,7 @@ export default function TopBar() {
       }
     }
     fetchQuickStats();
-  }, [monthStart, monthEnd]);
+  }, [monthStart, monthEnd, isAuthenticated, demoData?.transactions, demoData?.income]);
 
   const net = quickStats.income - quickStats.expenses;
 
@@ -106,6 +131,7 @@ export default function TopBar() {
 
 function SettingsPanel() {
   const { accounts, creditCards, refreshAccounts, refreshCreditCards } = useApp();
+  const { isAuthenticated } = useAuth();
   const [showAccountForm, setShowAccountForm] = useState(false);
   const [showCardForm, setShowCardForm] = useState(false);
   const [editingAccount, setEditingAccount] = useState(null);
@@ -129,12 +155,14 @@ function SettingsPanel() {
       <div>
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-sm font-bold text-white">Savings Accounts</h3>
-          <button
-            onClick={() => { setEditingAccount(null); setShowAccountForm(true); }}
-            className="btn-primary !py-2 !px-4 !text-xs"
-          >
-            + Add Account
-          </button>
+          {isAuthenticated && (
+            <button
+              onClick={() => { setEditingAccount(null); setShowAccountForm(true); }}
+              className="btn-primary !py-2 !px-4 !text-xs"
+            >
+              + Add Account
+            </button>
+          )}
         </div>
         {accounts.length === 0 ? (
           <p className="text-sm text-surface-500 text-center py-4">No accounts added yet</p>
@@ -149,18 +177,22 @@ function SettingsPanel() {
                   </p>
                 </div>
                 <div className="flex gap-2">
-                  <button
-                    onClick={() => { setEditingAccount(acc); setShowAccountForm(true); }}
-                    className="text-xs text-accent-400 hover:text-accent-300"
-                  >
-                    Edit
-                  </button>
-                  <button
-                    onClick={() => handleDeleteAccount(acc.id)}
-                    className="text-xs text-expense-400 hover:text-expense-300"
-                  >
-                    Delete
-                  </button>
+                  {isAuthenticated && (
+                    <>
+                      <button
+                        onClick={() => { setEditingAccount(acc); setShowAccountForm(true); }}
+                        className="text-xs text-accent-400 hover:text-accent-300"
+                      >
+                        Edit
+                      </button>
+                      <button
+                        onClick={() => handleDeleteAccount(acc.id)}
+                        className="text-xs text-expense-400 hover:text-expense-300"
+                      >
+                        Delete
+                      </button>
+                    </>
+                  )}
                 </div>
               </div>
             ))}
@@ -172,12 +204,14 @@ function SettingsPanel() {
       <div>
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-sm font-bold text-white">Credit Cards</h3>
-          <button
-            onClick={() => { setEditingCard(null); setShowCardForm(true); }}
-            className="btn-primary !py-2 !px-4 !text-xs"
-          >
-            + Add Card
-          </button>
+          {isAuthenticated && (
+            <button
+              onClick={() => { setEditingCard(null); setShowCardForm(true); }}
+              className="btn-primary !py-2 !px-4 !text-xs"
+            >
+              + Add Card
+            </button>
+          )}
         </div>
         {creditCards.length === 0 ? (
           <p className="text-sm text-surface-500 text-center py-4">No credit cards added yet</p>
@@ -192,18 +226,22 @@ function SettingsPanel() {
                   </p>
                 </div>
                 <div className="flex gap-2">
-                  <button
-                    onClick={() => { setEditingCard(cc); setShowCardForm(true); }}
-                    className="text-xs text-accent-400 hover:text-accent-300"
-                  >
-                    Edit
-                  </button>
-                  <button
-                    onClick={() => handleDeleteCard(cc.id)}
-                    className="text-xs text-expense-400 hover:text-expense-300"
-                  >
-                    Delete
-                  </button>
+                  {isAuthenticated && (
+                    <>
+                      <button
+                        onClick={() => { setEditingCard(cc); setShowCardForm(true); }}
+                        className="text-xs text-accent-400 hover:text-accent-300"
+                      >
+                        Edit
+                      </button>
+                      <button
+                        onClick={() => handleDeleteCard(cc.id)}
+                        className="text-xs text-expense-400 hover:text-expense-300"
+                      >
+                        Delete
+                      </button>
+                    </>
+                  )}
                 </div>
               </div>
             ))}

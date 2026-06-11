@@ -1,6 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
 import { useApp } from '../context/AppContext';
+import { useAuth } from '../context/AuthContext';
+import { useDemoData } from '../context/DemoContext';
 import IncomeForm from '../components/forms/IncomeForm';
 import EmptyState from '../components/shared/EmptyState';
 import { format, startOfMonth, endOfMonth } from 'date-fns';
@@ -9,11 +11,15 @@ import toast from 'react-hot-toast';
 
 export default function IncomeLogger() {
   const { accounts } = useApp();
+  const { isAuthenticated } = useAuth();
+  const demoData = useDemoData();
   const [incomeEntries, setIncomeEntries] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedMonth, setSelectedMonth] = useState(format(new Date(), 'yyyy-MM'));
 
+  // Fetch from Supabase (authenticated mode)
   const fetchIncome = useCallback(async () => {
+    if (!isAuthenticated) return;
     try {
       const [year, month] = selectedMonth.split('-').map(Number);
       const start = startOfMonth(new Date(year, month - 1));
@@ -33,7 +39,24 @@ export default function IncomeLogger() {
     } finally {
       setLoading(false);
     }
-  }, [selectedMonth]);
+  }, [selectedMonth, isAuthenticated]);
+
+  // Demo mode: reactively sync from DemoContext
+  useEffect(() => {
+    if (!isAuthenticated && demoData) {
+      const [year, month] = selectedMonth.split('-').map(Number);
+      const start = startOfMonth(new Date(year, month - 1));
+      const end = endOfMonth(new Date(year, month - 1));
+      const filtered = demoData.income
+        .filter((i) => {
+          const d = new Date(i.date);
+          return d >= start && d <= end;
+        })
+        .sort((a, b) => new Date(b.date) - new Date(a.date));
+      setIncomeEntries(filtered);
+      setLoading(false);
+    }
+  }, [isAuthenticated, demoData?.income, selectedMonth]);
 
   useEffect(() => {
     fetchIncome();
@@ -42,10 +65,14 @@ export default function IncomeLogger() {
   const handleDelete = async (id) => {
     if (!confirm('Delete this income entry?')) return;
     try {
-      const { error } = await supabase.from('income').delete().eq('id', id);
-      if (error) throw error;
+      if (isAuthenticated) {
+        const { error } = await supabase.from('income').delete().eq('id', id);
+        if (error) throw error;
+        fetchIncome();
+      } else {
+        demoData.deleteIncome(id);
+      }
       toast.success('Income deleted');
-      fetchIncome();
     } catch {
       toast.error('Failed to delete');
     }

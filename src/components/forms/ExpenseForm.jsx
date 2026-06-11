@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
 import { useApp } from '../../context/AppContext';
+import { useAuth } from '../../context/AuthContext';
+import { useDemoData } from '../../context/DemoContext';
 import CurrencyInput from '../shared/CurrencyInput';
 import toast from 'react-hot-toast';
 import { format } from 'date-fns';
@@ -8,6 +10,8 @@ import { CreditCard, ArrowRightLeft } from 'lucide-react';
 
 export default function ExpenseForm({ onSaved }) {
   const { categories, accounts, creditCards, getSubcategoriesForCategory, getCategoryByName } = useApp();
+  const { isAuthenticated } = useAuth();
+  const demoData = useDemoData();
 
   const [date, setDate] = useState(format(new Date(), "yyyy-MM-dd'T'HH:mm"));
   const [description, setDescription] = useState('');
@@ -87,8 +91,12 @@ export default function ExpenseForm({ onSaved }) {
         notes: [description, notes].filter(Boolean).join(' — ') || null,
       };
 
-      const { error } = await supabase.from('transactions').insert(payload);
-      if (error) throw error;
+      if (isAuthenticated) {
+        const { error } = await supabase.from('transactions').insert(payload);
+        if (error) throw error;
+      } else {
+        demoData.addTransaction(payload);
+      }
 
       toast.success('Transaction added!');
       resetForm();

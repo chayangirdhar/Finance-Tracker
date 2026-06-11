@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { supabase } from '../../lib/supabase';
 import { useApp } from '../../context/AppContext';
+import { useAuth } from '../../context/AuthContext';
+import { useDemoData } from '../../context/DemoContext';
 import CurrencyInput from '../shared/CurrencyInput';
 import toast from 'react-hot-toast';
 import { format } from 'date-fns';
@@ -9,6 +11,8 @@ const INCOME_SOURCES = ['Salary', 'Gig Work', 'Freelance', 'Bonus', 'Interest', 
 
 export default function IncomeForm({ onSaved }) {
   const { accounts } = useApp();
+  const { isAuthenticated } = useAuth();
+  const demoData = useDemoData();
 
   const [date, setDate] = useState(format(new Date(), 'yyyy-MM-dd'));
   const [source, setSource] = useState('');
@@ -44,8 +48,12 @@ export default function IncomeForm({ onSaved }) {
         notes: notes.trim() || null,
       };
 
-      const { error } = await supabase.from('income').insert(payload);
-      if (error) throw error;
+      if (isAuthenticated) {
+        const { error } = await supabase.from('income').insert(payload);
+        if (error) throw error;
+      } else {
+        demoData.addIncome(payload);
+      }
 
       toast.success('Income recorded!');
       resetForm();
