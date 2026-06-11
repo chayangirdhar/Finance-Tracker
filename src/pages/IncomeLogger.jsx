@@ -93,7 +93,7 @@ export default function IncomeLogger() {
     <div className="grid grid-cols-1 lg:grid-cols-5 gap-6 animate-fade-in">
       {/* Left: Form */}
       <div className="lg:col-span-2">
-        <div className="glass-card-static p-6">
+        <div className="glass-card-static p-4 sm:p-6">
           <div className="flex items-center gap-3 mb-6">
             <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-income/10">
               <Wallet size={20} className="text-income-400" />
@@ -148,7 +148,7 @@ export default function IncomeLogger() {
         )}
 
         {/* Income List */}
-        <div className="glass-card-static p-6">
+        <div className="glass-card-static p-4 sm:p-6">
           <h3 className="text-sm font-bold text-white mb-4">Income Entries</h3>
 
           {loading ? (
@@ -165,42 +165,84 @@ export default function IncomeLogger() {
             />
           ) : (
             <div className="space-y-2">
-              {incomeEntries.map((entry) => (
-                <div
-                  key={entry.id}
-                  className="group flex items-center gap-3 p-3 rounded-xl hover:bg-white/[0.03] transition-colors"
-                >
-                  <div className="w-2 h-2 rounded-full bg-income-400 flex-shrink-0" />
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm font-semibold text-white">{entry.source}</span>
-                      <span className="badge-income !text-[10px]">
-                        {getAccountName(entry.account_id)}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-2 mt-0.5">
-                      <span className="text-[10px] text-surface-500">
-                        {format(new Date(entry.date), 'd MMM yyyy')}
-                      </span>
-                      {entry.notes && (
-                        <>
-                          <span className="text-[10px] text-surface-600">•</span>
-                          <span className="text-[10px] text-surface-500 truncate">{entry.notes}</span>
-                        </>
-                      )}
-                    </div>
-                  </div>
-                  <span className="text-sm font-bold text-income-400 flex-shrink-0">
-                    +₹{Number(entry.amount).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
-                  </span>
-                  <button
-                    onClick={() => handleDelete(entry.id)}
-                    className="opacity-0 group-hover:opacity-100 text-surface-600 hover:text-expense-400 transition-all flex-shrink-0"
+              {/* Desktop View */}
+              <div className="hidden md:block space-y-2">
+                {incomeEntries.map((entry) => (
+                  <div
+                    key={entry.id}
+                    className="group flex items-center gap-3 p-3 rounded-xl hover:bg-white/[0.03] transition-colors"
                   >
-                    <Trash2 size={14} />
-                  </button>
-                </div>
-              ))}
+                    <div className="w-2 h-2 rounded-full bg-income-400 flex-shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-1.5 min-w-0">
+                        <span className="text-sm font-semibold text-white truncate">{entry.source}</span>
+                        <span className="badge-income !text-[10px] flex-shrink-0">
+                          {getAccountName(entry.account_id)}
+                        </span>
+                      </div>
+                      <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 mt-0.5">
+                        <span className="text-[10px] text-surface-500">
+                          {format(new Date(entry.date), 'd MMM yyyy')}
+                        </span>
+                        {entry.notes && (
+                          <>
+                            <span className="text-[10px] text-surface-600">•</span>
+                            <span className="text-[10px] text-surface-500 truncate">{entry.notes}</span>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                    <span className="text-sm font-bold text-income-400 flex-shrink-0">
+                      +₹{Number(entry.amount).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                    </span>
+                    <button
+                      onClick={() => handleDelete(entry.id)}
+                      className="opacity-0 group-hover:opacity-100 text-surface-600 hover:text-expense-400 transition-all flex-shrink-0"
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
+                ))}
+              </div>
+
+              {/* Mobile Stacked Card View */}
+              <div className="md:hidden space-y-3">
+                {incomeEntries.map((entry) => (
+                  <div
+                    key={entry.id}
+                    className="p-4 rounded-xl border border-white/[0.06] bg-white/[0.02] space-y-2 relative"
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="badge-income !text-[10px] flex-shrink-0">
+                        {entry.source}
+                      </span>
+                      <span className="font-bold text-income-400">
+                        +₹{Number(entry.amount).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                      </span>
+                    </div>
+                    {entry.account_id && (
+                      <div className="text-xs text-surface-400">
+                        Account: <span className="text-surface-300 font-medium">{getAccountName(entry.account_id)}</span>
+                      </div>
+                    )}
+                    <div className="text-[11px] text-surface-500 flex justify-between pr-6">
+                      <span>{format(new Date(entry.date), 'd MMM yyyy')}</span>
+                    </div>
+                    {entry.notes && (
+                      <p className="text-xs text-surface-600 border-t border-white/[0.04] pt-1.5 mt-1 pr-6">
+                        {entry.notes}
+                      </p>
+                    )}
+                    <button
+                      onClick={() => handleDelete(entry.id)}
+                      className="absolute right-3 bottom-3 text-surface-500 hover:text-expense-400 transition-colors"
+                      title="Delete"
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
+                ))}
+              </div>
             </div>
           )}
         </div>

@@ -158,7 +158,7 @@ export default function FinancialHealth() {
       </div>
 
       {/* Savings Accounts Matrix */}
-      <div className="glass-card-static p-6">
+      <div className="glass-card-static p-4 sm:p-6">
         <div className="flex items-center justify-between mb-5">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-income/10">
@@ -275,7 +275,7 @@ export default function FinancialHealth() {
       </div>
 
       {/* Credit Cards Matrix */}
-      <div className="glass-card-static p-6">
+      <div className="glass-card-static p-4 sm:p-6">
         <div className="flex items-center justify-between mb-5">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-accent/10">

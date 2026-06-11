@@ -128,7 +128,7 @@ export default function ExpenseForm({ onSaved }) {
       </button>
 
       {/* Row 1: Date + Amount */}
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <div>
           <label className="label">Date & Time</label>
           <input
@@ -157,7 +157,7 @@ export default function ExpenseForm({ onSaved }) {
       </div>
 
       {/* Row 2: Category + Subcategory */}
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <div>
           <label className="label">Category</label>
           <select
@@ -214,7 +214,7 @@ export default function ExpenseForm({ onSaved }) {
       </div>
 
       {/* Row 3: Payment Method */}
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <div>
           <label className="label">Payment Method</label>
           <select

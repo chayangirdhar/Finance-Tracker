@@ -35,7 +35,7 @@ function AppLayout() {
       <div className="flex-1 min-w-0 ml-0 md:ml-[72px] lg:ml-[260px] pb-20 md:pb-0 transition-all duration-300">
         <TopBar />
         {!isAuthenticated && <DemoBanner />}
-        <main className="p-6">
+        <main className="p-4 sm:p-6">
           <Routes>
             <Route path="/" element={<ExpenseLogger />} />
             <Route path="/income" element={<IncomeLogger />} />

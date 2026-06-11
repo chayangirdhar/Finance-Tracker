@@ -68,7 +68,7 @@ export default function IncomeForm({ onSaved }) {
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       {/* Date + Amount */}
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <div>
           <label className="label">Date</label>
           <input

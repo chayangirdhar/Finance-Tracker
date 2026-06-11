@@ -545,7 +545,7 @@ function MonthlyView({
       {/* Charts Row */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Donut Chart */}
-        <div className="glass-card-static p-6">
+        <div className="glass-card-static p-4 sm:p-6">
           <h3 className="text-sm font-bold text-white mb-4">Category Breakdown</h3>
           {donutData.length === 0 ? (
             <div className="flex items-center justify-center h-56 text-surface-500 text-sm">
@@ -597,7 +597,7 @@ function MonthlyView({
         </div>
 
         {/* Area Chart — Cumulative Spend Pacing */}
-        <div className="glass-card-static p-6">
+        <div className="glass-card-static p-4 sm:p-6">
           <h3 className="text-sm font-bold text-white mb-4">Spend Pacing — This vs Last Month</h3>
           {areaData.every((d) => d['This Month'] === 0 && d['Last Month'] === 0) ? (
             <div className="flex items-center justify-center h-56 text-surface-500 text-sm">
@@ -655,7 +655,7 @@ function MonthlyView({
       </div>
 
       {/* Transaction Ledger */}
-      <div className="glass-card-static p-6">
+      <div className="glass-card-static p-4 sm:p-6">
         <div className="flex items-center justify-between mb-5">
           <div className="flex items-center gap-3">
             <PieChartIcon size={20} className="text-accent-400" />
@@ -877,7 +877,7 @@ function YearlyView({ yearlyStats, annualAgg, lineData, categories, getCategoryN
       )}
 
       {/* Line Chart — Monthly Stats Trends */}
-      <div className="glass-card-static p-6">
+      <div className="glass-card-static p-4 sm:p-6">
         <h3 className="text-sm font-bold text-white mb-4">Spending Volatility — Mean / Median / Max Trends</h3>
         {lineData.every((d) => d['Mean Daily'] === 0 && d['Median Txn'] === 0 && d['Max Txn'] === 0) ? (
           <div className="flex items-center justify-center h-56 text-surface-500 text-sm">
@@ -934,7 +934,7 @@ function YearlyView({ yearlyStats, annualAgg, lineData, categories, getCategoryN
 
       {/* Discretionary Insights Panel */}
       {annualAgg && (
-        <div className="glass-card-static p-6">
+        <div className="glass-card-static p-4 sm:p-6">
           <h3 className="text-sm font-bold text-white mb-5">Discretionary Insights</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             <InsightCard
@@ -988,7 +988,7 @@ function YearlyView({ yearlyStats, annualAgg, lineData, categories, getCategoryN
       )}
 
       {/* Month-Wise Summary (Table on Desktop, Collapsible cards on Mobile) */}
-      <div className="glass-card-static p-6">
+      <div className="glass-card-static p-4 sm:p-6">
         <h3 className="text-sm font-bold text-white mb-4">Month-Wise Summary (Apr → Mar)</h3>
         
         {/* Desktop Table View */}
