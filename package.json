@@ -2,12 +2,15 @@
   "name": "expense-tracker",
   "private": true,
   "version": "1.0.0",
+  "homepage": "https://chayangirdhar.github.io/Finance-Tracker",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "seed": "node scripts/seed-categories.js"
+    "seed": "node scripts/seed-categories.js",
+    "predeploy": "npm run build",
+    "deploy": "gh-pages -d dist"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.49.0",
