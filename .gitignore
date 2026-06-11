@@ -1,0 +1,19 @@
+# Dependencies
+node_modules/
+.env
+
+# Build output
+dist/
+
+# Editor
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Temp extraction files
+extracted_data.json
+extract_xlsx.js
