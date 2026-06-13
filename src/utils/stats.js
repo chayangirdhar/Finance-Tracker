@@ -141,9 +141,9 @@ export function computeMonthStats(txns, income, monthStart, categories, opts) {
   const maxTxn = amounts.length > 0 ? Math.max(...amounts) : 0;
   const savingsRate = totalIncome > 0 ? ((totalIncome - totalExpenses) / totalIncome) * 100 : 0;
 
-  // Weekend vs weekday
-  const weekendTxns = monthTxns.filter((t) => isWeekend(t.date));
-  const weekdayTxns = monthTxns.filter((t) => !isWeekend(t.date));
+  // Weekend vs weekday (based on discretionary spend to remove fixed bills and savings/investments)
+  const weekendTxns = discretionaryTxns.filter((t) => isWeekend(t.date));
+  const weekdayTxns = discretionaryTxns.filter((t) => !isWeekend(t.date));
   const weekendSpend = weekendTxns.reduce((s, t) => s + Number(t.amount), 0);
   const weekdaySpend = weekdayTxns.reduce((s, t) => s + Number(t.amount), 0);
 

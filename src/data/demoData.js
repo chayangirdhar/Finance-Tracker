@@ -29,6 +29,7 @@ export const DEMO_CATEGORIES = [
   { id: 8, name: 'Added to Savings' },
   { id: 9, name: 'Credit Card Payment' },
   { id: 10, name: 'Investment' },
+  { id: 11, name: 'Munchies' },
 ];
 
 export const DEMO_SUBCATEGORIES = [
@@ -50,6 +51,9 @@ export const DEMO_SUBCATEGORIES = [
   { id: 16, category_id: 6, name: 'Daily Essentials' },
   { id: 17, category_id: 7, name: 'Medicine' },
   { id: 18, category_id: 7, name: 'Gym' },
+  { id: 19, category_id: 11, name: 'Ice Cream & Desserts' },
+  { id: 20, category_id: 11, name: 'Drinks & Beverages' },
+  { id: 21, category_id: 11, name: 'Late Night Snacks' },
 ];
 
 export const DEMO_ACCOUNTS = [

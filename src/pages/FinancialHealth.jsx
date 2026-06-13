@@ -349,7 +349,7 @@ export default function FinancialHealth() {
                     const stats = accountStats[acc.id] || {};
                     const credited = stats.salaryCredited || 0;
                     const spent = stats.salarySpent || 0;
-                    const remaining = credited - spent;
+                    const remaining = Number(acc.opening_balance) + credited - spent;
                     return (
                       <tr key={acc.id}>
                         <td className="font-semibold text-white">{acc.name}</td>
@@ -371,7 +371,7 @@ export default function FinancialHealth() {
                 const stats = accountStats[acc.id] || {};
                 const credited = stats.salaryCredited || 0;
                 const spent = stats.salarySpent || 0;
-                const remaining = credited - spent;
+                const remaining = Number(acc.opening_balance) + credited - spent;
                 return (
                   <div key={acc.id} className="p-4 rounded-xl border border-white/[0.06] bg-white/[0.02] space-y-3">
                     <div className="font-semibold text-white text-sm">{acc.name}</div>
