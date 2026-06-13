@@ -471,12 +471,14 @@ function MonthlyView({
             value={`${stats.savingsRate.toFixed(1)}%`}
             color={stats.savingsRate >= 20 ? 'income' : stats.savingsRate >= 0 ? 'accent' : 'expense'}
             sublabel={stats.savingsRate >= 20 ? 'Healthy' : stats.savingsRate >= 0 ? 'Moderate' : 'Deficit'}
+            tooltip="Percentage of your income that was saved (Income - Expenses) / Income."
           />
           <KPICard
             icon={Activity}
             label="Avg Daily Spend"
             value={`₹${fmt(stats.meanDaily)}`}
             color="accent"
+            tooltip="Average amount spent per day in the current month."
           />
           <KPICard
             icon={BarChart3}
@@ -484,12 +486,14 @@ function MonthlyView({
             value={`₹${fmt(stats.medianTxn)}`}
             color="accent"
             sublabel="Excl. fixed bills"
+            tooltip="The middle value of your discretionary transactions, excluding fixed bills."
           />
           <KPICard
             icon={ArrowUpRight}
             label="Largest Txn"
             value={`₹${fmt(stats.maxTxn)}`}
             color="expense"
+            tooltip="The single highest transaction logged in the current month."
           />
           <KPICard
             icon={Target}
@@ -497,6 +501,7 @@ function MonthlyView({
             value={`₹${fmt(stats.discretionary)}`}
             color="accent"
             sublabel={`of ₹${fmt(stats.totalExpenses)} total`}
+            tooltip="Your total non-essential spending, excluding fixed bills like rent or EMIs."
           />
           <KPICard
             icon={momChange !== null && momChange > 0 ? TrendingUp : TrendingDown}
@@ -504,6 +509,7 @@ function MonthlyView({
             value={momChange !== null ? `${momChange > 0 ? '+' : ''}${momChange.toFixed(1)}%` : 'N/A'}
             color={momChange !== null && momChange > 0 ? 'expense' : 'income'}
             sublabel={momChange !== null ? (momChange > 0 ? 'Spending up' : 'Spending down') : 'No prior data'}
+            tooltip="Month-over-Month change in your total spending compared to last month."
           />
         </div>
       )}
@@ -517,6 +523,7 @@ function MonthlyView({
             value={`${stats.expenseVelocity.toFixed(1)}/day`}
             color="accent"
             sublabel={`${stats.txnCount} txns this month`}
+            tooltip="Average number of transaction entries logged per day."
           />
           <KPICard
             icon={Target}
@@ -524,6 +531,7 @@ function MonthlyView({
             value={`${stats.categoryConcentration.toFixed(0)}%`}
             color={stats.categoryConcentration > 80 ? 'expense' : 'accent'}
             sublabel={stats.top3Categories.map((c) => c.name).join(', ') || '—'}
+            tooltip="The percentage of your total monthly spending consumed by your top 3 categories."
           />
           <KPICard
             icon={Calendar}
@@ -531,6 +539,7 @@ function MonthlyView({
             value={`₹${fmt(stats.avgWeekendDaily)}`}
             color={stats.avgWeekendDaily > stats.avgWeekdayDaily ? 'expense' : 'income'}
             sublabel={`Weekday: ₹${fmt(stats.avgWeekdayDaily)}/day`}
+            tooltip="Average daily spend on weekends. A lower number indicates stable weekly spending."
           />
           <KPICard
             icon={CreditCard}
@@ -538,6 +547,7 @@ function MonthlyView({
             value={`${stats.ccDependency.toFixed(1)}%`}
             color={stats.ccDependency > 50 ? 'expense' : 'income'}
             sublabel={stats.ccDependency > 50 ? 'High CC usage' : 'Healthy'}
+            tooltip="Percentage of transactions paid using credit cards vs cash or bank transfers."
           />
           <KPICard
             icon={Repeat}
@@ -545,6 +555,7 @@ function MonthlyView({
             value={`${stats.recurringRatio.toFixed(1)}%`}
             color={stats.recurringRatio > 50 ? 'expense' : 'accent'}
             sublabel="Fixed Bills ÷ Income"
+            tooltip="The portion of your income consumed by fixed monthly bills (Fixed Bills / Income)."
           />
         </div>
       )}
@@ -1148,7 +1159,7 @@ function YearlyView({ yearlyStats, annualAgg, lineData, categories, getCategoryN
 // ═══════════════════════════════════════════════════════════════
 // SHARED COMPONENTS
 // ═══════════════════════════════════════════════════════════════
-function KPICard({ icon: Icon, label, value, color = 'accent', sublabel }) {
+function KPICard({ icon: Icon, label, value, color = 'accent', sublabel, tooltip }) {
   const colorClasses = {
     income: 'text-income-400 bg-income/10',
     expense: 'text-expense-400 bg-expense/10',
@@ -1161,7 +1172,7 @@ function KPICard({ icon: Icon, label, value, color = 'accent', sublabel }) {
   };
 
   return (
-    <div className="glass-card-static p-4 group hover:scale-[1.02] transition-transform duration-200">
+    <div className="glass-card-static p-4 group hover:scale-[1.02] transition-all duration-200 relative">
       <div className="flex items-center gap-2 mb-2">
         <div className={`w-7 h-7 rounded-lg flex items-center justify-center ${colorClasses[color]}`}>
           <Icon size={14} />
@@ -1171,6 +1182,12 @@ function KPICard({ icon: Icon, label, value, color = 'accent', sublabel }) {
       <p className={`text-lg font-bold ${textColor[color]} leading-tight`}>{value}</p>
       {sublabel && (
         <p className="text-[10px] text-surface-500 mt-1 truncate">{sublabel}</p>
+      )}
+      {tooltip && (
+        <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-48 hidden group-hover:block z-50 bg-slate-950/95 border border-white/[0.08] p-2.5 rounded-xl shadow-2xl text-[10px] text-surface-300 pointer-events-none text-center backdrop-blur-md">
+          {tooltip}
+          <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-slate-950/95" />
+        </div>
       )}
     </div>
   );

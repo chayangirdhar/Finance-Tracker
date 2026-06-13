@@ -29,7 +29,7 @@ export default function ExpenseForm({ onSaved }) {
   const [categoryId, setCategoryId] = useState('');
   const [subcategoryId, setSubcategoryId] = useState('');
   const [amount, setAmount] = useState(0);
-  const [paymentMethod, setPaymentMethod] = useState('');
+  const [paymentMethod, setPaymentMethod] = useState('Salary Account');
   const [creditCardId, setCreditCardId] = useState('');
   const [accountId, setAccountId] = useState('');
   const [ccPaymentType, setCcPaymentType] = useState('');
@@ -79,7 +79,7 @@ export default function ExpenseForm({ onSaved }) {
     setCategoryId('');
     setSubcategoryId('');
     setAmount(0);
-    setPaymentMethod('');
+    setPaymentMethod('Salary Account');
     setCreditCardId('');
     setAccountId('');
     setCcPaymentType('');
