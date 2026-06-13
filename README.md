@@ -14,6 +14,7 @@ Built on top of a highly responsive **React + Vite** frontend, styled with **Tai
   * **Live Bank Balances** (`Opening Balance` + `Income In` - `Expenses Out`).
   * **Outstanding Credit Card Liabilities** (`Opening Dues` + `Card Spend` - `Bill Payments`).
   * **Net Liquidity Position** (`Total Savings Balance` - `Outstanding Card Dues`).
+  * **Salary Account Rules:** All income tracking metrics (including Salary Remaining, dashboard charts, and historical summaries) only consider inflows deposited directly into a designated default **Salary Account**. Income deposited into secondary savings accounts updates the account balance but does not inflate your monthly/yearly income aggregates.
 
 ### 📈 2. Spend Pacing & Habit Adjusting
 * **The Problem:** You want to know if you're spending too fast *during* the month, rather than realizing it after you've already overspent.
@@ -21,13 +22,15 @@ Built on top of a highly responsive **React + Vite** frontend, styled with **Tai
 
 ### 💳 3. Managing Credit Card Debt & Limits
 * **The Problem:** Maxing out credit cards or losing track of your credit utilization ratio can hurt your credit score.
-* **The Solution:** The **Credit Cards Matrix** monitors credit card utilization percentages in real time. It features a color-coded indicator (Green ➡️ Amber ➡️ Red) that warns you when a card's utilization goes beyond 50% or 80%. When you pay off a credit card bill, logging it under the `Credit Card Payment` category automatically clears the card's dues and deducts the amount from the selected bank account.
+* **The Solution:** The **Credit Cards Matrix** monitors credit card utilization percentages in real time. It features a color-coded indicator (Green ➡️ Amber ➡️ Red) that warns you when a card's utilization goes beyond 50% or 80%.
+  * **Customizable Due Days:** Customize the billing due day (1-31) for each credit card individually.
+  * **Automatic Paid Status:** Credit card bill payment checkboxes are computed dynamically by scanning for a `Credit Card Payment` category transaction in the current month. The status automatically ticks green when paid, and resets to unpaid at the start of a new month (preventing manual state mismatch).
 
 ### 📊 4. Granular Financial Health Indicators
 * **The Problem:** Simple expense figures don't tell the whole story of your financial habits.
 * **The Solution:** Get access to 11 professional-grade financial metrics calculated on the fly:
   * **Savings Rate:** The percentage of income saved `((Income - Expenses) / Income) * 100`.
-  * **Weekend vs. Weekday Spikes:** Spot if your weekend spending habits are significantly higher than weekdays.
+  * **Weekend vs. Weekday Spikes:** Spot if your weekend spending habits are significantly higher than weekdays, calculated strictly on discretionary transactions.
   * **Discretionary Spending:** Filters out fixed bills (Rent, Utilities, EMI) to show exactly how much you are spending on "wants".
   * **CC Dependency:** The share of expenses paid with credit cards vs cash/bank transfer.
   * **Category Concentration:** Tracks whether your top 3 categories swallow more than 80% of your budget.
@@ -39,28 +42,31 @@ Built on top of a highly responsive **React + Vite** frontend, styled with **Tai
 ### 1. Expense Logger (Dashboard)
 Log transactions with a split-second workflow. The form dynamically populates the appropriate subcategories and accounts based on your selection.
 * **Payment Methods:** Switch between *Cash*, *Bank Transfer* (updates savings account), or *Credit Card* (updates credit card dues).
+* **Smart Defaults:** Auto-selects your default salary account as the payment source, and resets safely on form submissions.
 ![Expense Logger Screenshot](screenshots/expense_logger.png)
 
 ### 2. Settings: Managing Accounts & Credit Cards
 Accessible directly from the **Gear icon** in the top-right header, this modal is the control center of your tracker.
-* **Configure Accounts:** Set up bank accounts (e.g., Chase, Wells Fargo) or digital wallets (e.g., PayPal, Venmo) with custom opening balances.
-* **Configure Credit Cards:** Define credit limits and current outstanding dues for each card.
-* *The interface allows you to add, edit, or delete accounts and cards on the fly.*
+* **Configure Accounts:** Set up bank accounts or digital wallets with custom opening balances, and designate a default Salary Account.
+* **Configure Credit Cards:** Define credit limits, opening dues, and custom billing due day (1-31) for each card.
 
 ### 3. Income Logger
-Quickly input salaries, freelance payments, interest, or cash gifts. Direct the funds to any of your configured savings accounts to automatically update the bank's live balance.
+Input salaries, bonuses, interest, or debt repayments from friends. 
+* **Allowed Sources:** Income sources are strictly categorized as `Salary`, `Bonus`, `Interest`, or `Debt Repayment`.
+* **Liquidity Routing:** Direct funds to any of your configured accounts (e.g. savings account) to update its live balance. Only income sent to your default salary account counts towards application-wide income and salary-remaining metrics.
 ![Income Logger Screenshot](screenshots/income_logger.png)
 
 ### 4. Financial Health Matrix
 A detailed diagnostic board displaying your balance sheets:
 * **Savings Matrix:** Real-time logging of opening balance, accumulated income, direct expenses out, and final live balance.
-* **Credit Cards Matrix:** Progress bars depicting credit limit usage, opening dues, direct card spend, bill payments made, total owed, and available credit limit.
+* **Credit Cards Matrix:** Progress bars depicting credit limit usage, opening dues, direct card spend, bill payments made, total owed, and available credit limit. Shows dynamic billing due dates and calculated payment checkmarks.
 ![Financial Health Screenshot](screenshots/financial_health.png)
 
 ### 5. Interactive Analytics Panel
-* **Category Breakdown (Donut Chart):** Visualizes expense categories (e.g., Groceries, Food & Dining, Transport) with percentage shares and totals.
+* **TopBar Discretionary Spend:** The center header tracks your total monthly discretionary spend (excluding savings transfers, investments, and credit card payments to avoid double counting).
+* **Category Breakdown (Donut Chart):** Visualizes expense categories (e.g., Groceries, Food & Dining, Transport, Munchies) with percentage shares and totals.
 * **Spend Pacing Chart (Area Chart):** Cumulative monthly spend comparison.
-* **Yearly Trends (Line/Bar Charts):** Toggle to the Yearly tab to analyze Mean Daily Spend, Median Transaction size, and Max Transaction peaks over the current financial year (April to March).
+* **Yearly Trends (Line/Bar Charts):** Toggle to the Yearly tab to analyze Mean Daily Spend, Median Transaction size, and Max Transaction peaks over the current financial year (April to March) computed strictly over active months.
 * **Ledger Table:** A powerful filterable search ledger with date range selection and categories to locate or delete records.
 ![Analytics Screenshot](screenshots/analytics.png)
 
@@ -109,12 +115,12 @@ VITE_SUPABASE_ANON_KEY=your-supabase-anon-key
 
 ## 🗄️ Supabase Database & Tables Setup
 
-To set up your Supabase database:
+To set up your Supabase database from scratch:
 
 1. Log in to your [Supabase Dashboard](https://supabase.com/).
 2. Create a new project.
 3. Open the **SQL Editor** from the left navigation panel.
-4. Create a new query, paste the following SQL script to create the tables, and click **Run**:
+4. Create a new query, paste the following SQL script to create all schema tables, and click **Run**:
 
 ```sql
 -- 1. Create Accounts Table
@@ -122,7 +128,8 @@ CREATE TABLE accounts (
     id SERIAL PRIMARY KEY,
     name VARCHAR(255) NOT NULL,
     type VARCHAR(50) NOT NULL,
-    opening_balance DECIMAL(12,2) DEFAULT 0.00
+    opening_balance DECIMAL(12,2) DEFAULT 0.00,
+    is_salary_default BOOLEAN DEFAULT false
 );
 
 -- 2. Create Credit Cards Table
@@ -130,7 +137,8 @@ CREATE TABLE credit_cards (
     id SERIAL PRIMARY KEY,
     name VARCHAR(255) NOT NULL,
     credit_limit DECIMAL(12,2) NOT NULL,
-    opening_dues DECIMAL(12,2) DEFAULT 0.00
+    opening_dues DECIMAL(12,2) DEFAULT 0.00,
+    due_day INTEGER DEFAULT 20
 );
 
 -- 3. Create Categories Table
@@ -167,6 +175,7 @@ CREATE TABLE transactions (
     payment_method VARCHAR(50) NOT NULL,
     account_id INTEGER REFERENCES accounts(id),
     credit_card_id INTEGER REFERENCES credit_cards(id),
+    cc_payment_type VARCHAR(50) DEFAULT NULL,
     notes TEXT
 );
 ```
@@ -175,7 +184,7 @@ CREATE TABLE transactions (
 
 ## 🌱 Seeding Categories and Subcategories
 
-The project includes a seeder script (`scripts/seed-categories.js`) to populate the `categories` and `subcategories` tables with predefined items (Fixed Bills, Food & Dining, Transport, Shopping, Entertainment, Groceries, Investments, etc.).
+The project includes a seeder script (`scripts/seed-categories.js`) to populate the `categories` and `subcategories` tables with predefined items (Fixed Bills, Food & Dining, Transport, Shopping, Entertainment, Groceries, Investments, Munchies, etc.).
 
 To seed your Supabase database:
 

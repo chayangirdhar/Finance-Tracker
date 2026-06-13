@@ -139,7 +139,10 @@ export function computeMonthStats(txns, income, monthStart, categories, opts) {
   const meanDaily = days > 0 ? totalExpenses / days : 0;
   const medianTxn = median(discretionaryAmounts); // Median of discretionary only
   const maxTxn = amounts.length > 0 ? Math.max(...amounts) : 0;
-  const savingsRate = totalIncome > 0 ? ((totalIncome - totalExpenses) / totalIncome) * 100 : 0;
+  const salaryAndBonusIncome = monthIncome
+    .filter((i) => ['Salary', 'Bonus'].includes(i.source))
+    .reduce((s, i) => s + Number(i.amount), 0);
+  const savingsRate = salaryAndBonusIncome > 0 ? (savings / salaryAndBonusIncome) * 100 : 0;
 
   // Weekend vs weekday (based on discretionary spend to remove fixed bills and savings/investments)
   const weekendTxns = discretionaryTxns.filter((t) => isWeekend(t.date));
