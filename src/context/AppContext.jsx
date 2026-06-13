@@ -91,6 +91,12 @@ export function AppProvider({ children }) {
     if (!error) setCreditCards(data || []);
   }, []);
 
+  const updateCreditCard = useCallback(async (id, updates) => {
+    const { error } = await supabase.from('credit_cards').update(updates).eq('id', id);
+    if (error) throw error;
+    await refreshCreditCards();
+  }, [refreshCreditCards]);
+
   const refreshCategories = useCallback(async () => {
     const [catRes, subRes] = await Promise.all([
       supabase.from('categories').select('*').order('id'),
@@ -110,6 +116,7 @@ export function AppProvider({ children }) {
     getCategoryByName,
     refreshAccounts,
     refreshCreditCards,
+    updateCreditCard,
     refreshCategories,
     refreshAll: fetchAll,
   };

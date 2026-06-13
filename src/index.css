@@ -207,6 +207,14 @@ body {
     border-bottom: 1px solid rgba(255, 255, 255, 0.06);
   }
 
+  .data-table thead th.text-right {
+    text-align: right;
+  }
+
+  .data-table thead th.text-center {
+    text-align: center;
+  }
+
   .data-table tbody td {
     @apply px-4 py-3;
     border-bottom: 1px solid rgba(255, 255, 255, 0.04);

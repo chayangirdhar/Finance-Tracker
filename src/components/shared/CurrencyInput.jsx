@@ -1,7 +1,15 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 export default function CurrencyInput({ value, onChange, placeholder = '0.00', className = '', ...props }) {
   const [displayValue, setDisplayValue] = useState(value ? String(value) : '');
+
+  useEffect(() => {
+    const numericDisplay = parseFloat(displayValue) || 0;
+    if (value !== numericDisplay) {
+      setDisplayValue(value ? String(value) : '');
+    }
+  }, [value]);
+
 
   const handleChange = (e) => {
     const raw = e.target.value.replace(/[^0-9.]/g, '');

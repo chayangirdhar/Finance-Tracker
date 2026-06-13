@@ -6,6 +6,7 @@ export default function CreditCardForm({ card, onSaved }) {
   const [name, setName] = useState(card?.name || '');
   const [creditLimit, setCreditLimit] = useState(card?.credit_limit || '');
   const [openingDues, setOpeningDues] = useState(card?.opening_dues || '');
+  const [dueDay, setDueDay] = useState(card?.due_day || 20);
   const [saving, setSaving] = useState(false);
 
   const handleSubmit = async (e) => {
@@ -18,6 +19,11 @@ export default function CreditCardForm({ card, onSaved }) {
       toast.error('Credit limit is required');
       return;
     }
+    const dayNum = parseInt(dueDay);
+    if (isNaN(dayNum) || dayNum < 1 || dayNum > 31) {
+      toast.error('Due day must be between 1 and 31');
+      return;
+    }
 
     setSaving(true);
     try {
@@ -25,6 +31,7 @@ export default function CreditCardForm({ card, onSaved }) {
         name: name.trim(),
         credit_limit: parseFloat(creditLimit),
         opening_dues: parseFloat(openingDues) || 0,
+        due_day: dayNum,
       };
 
       if (card?.id) {
@@ -76,6 +83,18 @@ export default function CreditCardForm({ card, onSaved }) {
           onChange={(e) => setOpeningDues(e.target.value)}
           className="input-glass"
           placeholder="0.00"
+        />
+      </div>
+      <div>
+        <label className="label">Due Day of Month</label>
+        <input
+          type="number"
+          min="1"
+          max="31"
+          value={dueDay}
+          onChange={(e) => setDueDay(e.target.value)}
+          className="input-glass"
+          placeholder="20"
         />
       </div>
       <button type="submit" disabled={saving} className="btn-primary w-full">

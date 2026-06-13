@@ -162,10 +162,17 @@ export default function Analytics() {
         return catName.includes(q) || subName.includes(q) || notes.includes(q);
       });
     }
-    if (dateFrom) results = results.filter((t) => t.date >= new Date(dateFrom).toISOString());
+    if (dateFrom) {
+      results = results.filter((t) => {
+        const localDate = format(new Date(t.date), 'yyyy-MM-dd');
+        return localDate >= dateFrom;
+      });
+    }
     if (dateTo) {
-      const end = new Date(dateTo); end.setHours(23, 59, 59);
-      results = results.filter((t) => t.date <= end.toISOString());
+      results = results.filter((t) => {
+        const localDate = format(new Date(t.date), 'yyyy-MM-dd');
+        return localDate <= dateTo;
+      });
     }
     if (filterCategory) results = results.filter((t) => t.category_id === Number(filterCategory));
     return results;

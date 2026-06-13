@@ -50,8 +50,8 @@ export default function TopBar() {
           supabase
             .from('income')
             .select('amount')
-            .gte('date', monthStart.split('T')[0])
-            .lte('date', monthEnd.split('T')[0]),
+            .gte('date', format(new Date(now.getFullYear(), now.getMonth(), 1), 'yyyy-MM-dd'))
+            .lte('date', format(new Date(now.getFullYear(), now.getMonth() + 1, 0), 'yyyy-MM-dd')),
           supabase
             .from('transactions')
             .select('amount')
@@ -200,7 +200,14 @@ function SettingsPanel() {
             {accounts.map((acc) => (
               <div key={acc.id} className="glass-card p-3 flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-semibold text-white">{acc.name}</p>
+                  <p className="text-sm font-semibold text-white flex items-center gap-1.5">
+                    {acc.name}
+                    {acc.is_salary_default && (
+                      <span className="badge-income !text-[9px] !py-0.5 !px-1.5 flex items-center gap-1">
+                        ⭐ Default
+                      </span>
+                    )}
+                  </p>
                   <p className="text-xs text-surface-500">
                     {acc.type} · Opening: ₹{Number(acc.opening_balance).toLocaleString('en-IN')}
                   </p>
@@ -251,7 +258,7 @@ function SettingsPanel() {
                 <div>
                   <p className="text-sm font-semibold text-white">{cc.name}</p>
                   <p className="text-xs text-surface-500">
-                    Limit: ₹{Number(cc.credit_limit).toLocaleString('en-IN')} · Dues: ₹{Number(cc.opening_dues).toLocaleString('en-IN')}
+                    Limit: ₹{Number(cc.credit_limit).toLocaleString('en-IN')} · Dues: ₹{Number(cc.opening_dues).toLocaleString('en-IN')} · Due: Day {cc.due_day || 20}
                   </p>
                 </div>
                 <div className="flex gap-2">

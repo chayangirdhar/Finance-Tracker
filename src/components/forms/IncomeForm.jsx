@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
 import { useApp } from '../../context/AppContext';
 import { useAuth } from '../../context/AuthContext';
@@ -22,12 +22,33 @@ export default function IncomeForm({ onSaved }) {
   const [notes, setNotes] = useState('');
   const [saving, setSaving] = useState(false);
 
+  // Auto-select salary default account when source is Salary
+  useEffect(() => {
+    if (source === 'Salary') {
+      const defaultAcc = accounts.find((acc) => acc.is_salary_default);
+      if (defaultAcc) {
+        setAccountId(String(defaultAcc.id));
+      }
+    }
+  }, [source, accounts]);
+
+  // Pre-fill default salary account on mount / accounts load
+  useEffect(() => {
+    if (!accountId && accounts.length > 0) {
+      const defaultAcc = accounts.find((acc) => acc.is_salary_default);
+      if (defaultAcc) {
+        setAccountId(String(defaultAcc.id));
+      }
+    }
+  }, [accounts]);
+
   const resetForm = () => {
     setDate(format(new Date(), 'yyyy-MM-dd'));
     setSource('');
     setCustomSource('');
     setAmount(0);
-    setAccountId('');
+    const defaultAcc = accounts.find((acc) => acc.is_salary_default);
+    setAccountId(defaultAcc ? String(defaultAcc.id) : '');
     setNotes('');
   };
 
@@ -40,11 +61,14 @@ export default function IncomeForm({ onSaved }) {
 
     setSaving(true);
     try {
+      const defaultAcc = accounts.find((acc) => acc.is_salary_default);
+      const finalAccountId = accountId ? Number(accountId) : (defaultAcc ? defaultAcc.id : null);
+
       const payload = {
         date,
         source: finalSource,
         amount: Math.round(amount * 100) / 100,
-        account_id: accountId ? Number(accountId) : null,
+        account_id: finalAccountId,
         notes: notes.trim() || null,
       };
 

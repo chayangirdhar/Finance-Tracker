@@ -6,6 +6,7 @@ export default function AccountForm({ account, onSaved }) {
   const [name, setName] = useState(account?.name || '');
   const [type, setType] = useState(account?.type || 'Bank');
   const [openingBalance, setOpeningBalance] = useState(account?.opening_balance || '');
+  const [isSalaryDefault, setIsSalaryDefault] = useState(account?.is_salary_default || false);
   const [saving, setSaving] = useState(false);
 
   const handleSubmit = async (e) => {
@@ -21,15 +22,22 @@ export default function AccountForm({ account, onSaved }) {
         name: name.trim(),
         type,
         opening_balance: parseFloat(openingBalance) || 0,
+        is_salary_default: isSalaryDefault,
       };
 
       if (account?.id) {
+        if (isSalaryDefault) {
+          await supabase.from('accounts').update({ is_salary_default: false }).neq('id', account.id);
+        }
         const { error } = await supabase.from('accounts').update(payload).eq('id', account.id);
         if (error) throw error;
         toast.success('Account updated');
       } else {
-        const { error } = await supabase.from('accounts').insert(payload);
+        const { data, error } = await supabase.from('accounts').insert(payload).select().single();
         if (error) throw error;
+        if (isSalaryDefault && data?.id) {
+          await supabase.from('accounts').update({ is_salary_default: false }).neq('id', data.id);
+        }
         toast.success('Account added');
       }
       onSaved();
@@ -70,6 +78,19 @@ export default function AccountForm({ account, onSaved }) {
           className="input-glass"
           placeholder="0.00"
         />
+      </div>
+      <div className="flex items-center justify-between p-3 rounded-xl border border-white/[0.08] bg-white/[0.03]">
+        <div>
+          <label className="text-sm font-medium text-white block">Default for Salary Credits</label>
+          <span className="text-[10px] text-surface-500">Automatically select this account for salary credits</span>
+        </div>
+        <button
+          type="button"
+          onClick={() => setIsSalaryDefault(!isSalaryDefault)}
+          className={`w-9 h-5 rounded-full relative transition-colors duration-200 ${isSalaryDefault ? 'bg-income-400' : 'bg-surface-700'}`}
+        >
+          <div className={`absolute top-0.5 w-4 h-4 rounded-full bg-white transition-transform duration-200 ${isSalaryDefault ? 'translate-x-4' : 'translate-x-0.5'}`} />
+        </button>
       </div>
       <button type="submit" disabled={saving} className="btn-primary w-full">
         {saving ? 'Saving...' : account ? 'Update Account' : 'Add Account'}

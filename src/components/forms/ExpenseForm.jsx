@@ -8,6 +8,17 @@ import toast from 'react-hot-toast';
 import { format } from 'date-fns';
 import { CreditCard, ArrowRightLeft } from 'lucide-react';
 
+const toLocalISOString = (localDateTimeStr) => {
+  if (!localDateTimeStr) return null;
+  const d = new Date(localDateTimeStr);
+  const offsetMinutes = -d.getTimezoneOffset();
+  const sign = offsetMinutes >= 0 ? '+' : '-';
+  const pad = (num) => String(Math.floor(Math.abs(num))).padStart(2, '0');
+  const offsetHours = pad(offsetMinutes / 60);
+  const offsetMin = pad(offsetMinutes % 60);
+  return `${localDateTimeStr}:00${sign}${offsetHours}:${offsetMin}`;
+};
+
 export default function ExpenseForm({ onSaved }) {
   const { categories, accounts, creditCards, getSubcategoriesForCategory, getCategoryByName } = useApp();
   const { isAuthenticated } = useAuth();
@@ -25,6 +36,7 @@ export default function ExpenseForm({ onSaved }) {
   const [notes, setNotes] = useState('');
   const [isCCPayment, setIsCCPayment] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [savingsTargetId, setSavingsTargetId] = useState('');
 
   // Get current category object
   const selectedCategory = categories.find((c) => c.id === Number(categoryId));
@@ -51,6 +63,16 @@ export default function ExpenseForm({ onSaved }) {
     }
   }, [isCCPayment, getCategoryByName]);
 
+  // Auto-fill account when "Salary Account" is chosen
+  useEffect(() => {
+    if (paymentMethod === 'Salary Account') {
+      const defaultAcc = accounts.find((acc) => acc.is_salary_default);
+      if (defaultAcc) {
+        setAccountId(String(defaultAcc.id));
+      }
+    }
+  }, [paymentMethod, accounts]);
+
   const resetForm = () => {
     setDate(format(new Date(), "yyyy-MM-dd'T'HH:mm"));
     setDescription('');
@@ -63,6 +85,7 @@ export default function ExpenseForm({ onSaved }) {
     setCcPaymentType('');
     setNotes('');
     setIsCCPayment(false);
+    setSavingsTargetId('');
   };
 
   const handleSubmit = async (e) => {
@@ -76,11 +99,16 @@ export default function ExpenseForm({ onSaved }) {
       toast.error('Select an account');
       return;
     }
+    if (isAddedToSavings && !savingsTargetId) {
+      toast.error('Select target savings account');
+      return;
+    }
 
     setSaving(true);
     try {
+      const savingsPrefix = isAddedToSavings ? `[savings_to:${savingsTargetId}]` : '';
       const payload = {
-        date: new Date(date).toISOString(),
+        date: toLocalISOString(date),
         category_id: Number(categoryId),
         subcategory_id: subcategoryId ? Number(subcategoryId) : null,
         amount: Math.round(amount * 100) / 100,
@@ -88,7 +116,7 @@ export default function ExpenseForm({ onSaved }) {
         account_id: accountId ? Number(accountId) : null,
         credit_card_id: creditCardId ? Number(creditCardId) : null,
         cc_payment_type: isCreditCardPaymentCategory ? ccPaymentType || null : null,
-        notes: [description, notes].filter(Boolean).join(' — ') || null,
+        notes: [savingsPrefix, description, notes].filter(Boolean).join(' — ') || null,
       };
 
       if (isAuthenticated) {
@@ -178,13 +206,13 @@ export default function ExpenseForm({ onSaved }) {
           </label>
           {isAddedToSavings ? (
             <select
-              value={subcategoryId}
-              onChange={(e) => setSubcategoryId(e.target.value)}
+              value={savingsTargetId}
+              onChange={(e) => setSavingsTargetId(e.target.value)}
               className="input-glass"
             >
               <option value="">Select account</option>
               {accounts.map((acc) => (
-                <option key={acc.id} value="">{acc.name}</option>
+                <option key={acc.id} value={acc.id}>{acc.name}</option>
               ))}
             </select>
           ) : isCreditCardPaymentCategory ? (
@@ -224,8 +252,7 @@ export default function ExpenseForm({ onSaved }) {
             disabled={isCCPayment}
           >
             <option value="">Select method</option>
-            <option value="Cash">Cash</option>
-            <option value="UPI">UPI</option>
+            <option value="Salary Account">Salary Account</option>
             <option value="Credit Card">Credit Card</option>
             <option value="Savings Account">Savings Account</option>
           </select>
@@ -256,7 +283,8 @@ export default function ExpenseForm({ onSaved }) {
             <select
               value={accountId}
               onChange={(e) => setAccountId(e.target.value)}
-              className="input-glass"
+              className={`input-glass ${paymentMethod === 'Salary Account' ? 'opacity-60 cursor-not-allowed bg-white/[0.02]' : ''}`}
+              disabled={paymentMethod === 'Salary Account'}
             >
               <option value="">Select account</option>
               {accounts.map((acc) => (

@@ -43,7 +43,7 @@ export function DemoProvider({ children }) {
   const categories = DEMO_CATEGORIES;
   const subcategories = DEMO_SUBCATEGORIES;
   const accounts = DEMO_ACCOUNTS;
-  const creditCards = DEMO_CREDIT_CARDS;
+  const [creditCards, setCreditCards] = useSessionState('demo_credit_cards', DEMO_CREDIT_CARDS);
 
   const getSubcategoriesForCategory = useCallback(
     (categoryId) => {
@@ -60,6 +60,12 @@ export function DemoProvider({ children }) {
 
   const noop = useCallback(async () => {}, []);
 
+  const updateCreditCard = useCallback(async (id, updates) => {
+    setCreditCards((prev) =>
+      prev.map((c) => (c.id === id ? { ...c, ...updates } : c))
+    );
+  }, [setCreditCards]);
+
   // Provide the same shape that AppContext.Provider expects
   const appValue = useMemo(
     () => ({
@@ -72,10 +78,11 @@ export function DemoProvider({ children }) {
       getCategoryByName,
       refreshAccounts: noop,
       refreshCreditCards: noop,
+      updateCreditCard,
       refreshCategories: noop,
       refreshAll: noop,
     }),
-    [getSubcategoriesForCategory, getCategoryByName, noop]
+    [getSubcategoriesForCategory, getCategoryByName, noop, creditCards, updateCreditCard]
   );
 
   // ── Demo CRUD ──────────────────────────────────────────────
