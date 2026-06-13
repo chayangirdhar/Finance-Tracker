@@ -81,7 +81,8 @@ export default function ExpenseForm({ onSaved }) {
     setAmount(0);
     setPaymentMethod('Salary Account');
     setCreditCardId('');
-    setAccountId('');
+    const defaultAcc = accounts.find((acc) => acc.is_salary_default);
+    setAccountId(defaultAcc ? String(defaultAcc.id) : '');
     setCcPaymentType('');
     setNotes('');
     setIsCCPayment(false);
