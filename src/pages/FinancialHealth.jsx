@@ -113,9 +113,9 @@ export default function FinancialHealth() {
 
         const monthlyChange = curMonthIncomeIn - curMonthExpensesOut + curMonthSavingsIn;
 
-        // 3. Salary account metrics (current month)
+        // 3. Salary account metrics (current month) — sum all income deposited to this account
         const curMonthSalaryIncome = (allIncome || [])
-          .filter((i) => i.account_id === acc.id && i.source === 'Salary' && isInCurrentMonth(i.date))
+          .filter((i) => i.account_id === acc.id && isInCurrentMonth(i.date))
           .reduce((s, i) => s + Number(i.amount), 0);
 
         const curMonthSalaryExpense = (allTxns || [])

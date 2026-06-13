@@ -89,21 +89,21 @@ export function getDefaultTransactions() {
 
     // Earlier this month (3–10 days ago)
     { id: 1011, date: daysAgo(3, 11, 0), category_id: 3, subcategory_id: 9, amount: 1299, payment_method: 'Credit Card', account_id: null, credit_card_id: 2, cc_payment_type: null, notes: 'Amazon — phone case + earbuds' },
-    { id: 1012, date: daysAgo(4, 18, 0), category_id: 5, subcategory_id: 14, amount: 799, payment_method: 'UPI', account_id: 1, credit_card_id: null, cc_payment_type: null, notes: 'Jio Fiber monthly bill' },
-    { id: 1013, date: daysAgo(5, 9, 0), category_id: 5, subcategory_id: 13, amount: 1250, payment_method: 'UPI', account_id: 1, credit_card_id: null, cc_payment_type: null, notes: 'Electricity bill' },
+    { id: 1012, date: daysAgo(4, 18, 0), category_id: 5, subcategory_id: 14, amount: 799, payment_method: 'UPI', account_id: 4, credit_card_id: null, cc_payment_type: null, notes: 'Jio Fiber monthly bill' },
+    { id: 1013, date: daysAgo(5, 9, 0), category_id: 5, subcategory_id: 13, amount: 1250, payment_method: 'UPI', account_id: 4, credit_card_id: null, cc_payment_type: null, notes: 'Electricity bill' },
     { id: 1014, date: daysAgo(6, 12, 0), category_id: 1, subcategory_id: 2, amount: 180, payment_method: 'UPI', account_id: 2, credit_card_id: null, cc_payment_type: null, notes: 'Coffee at Third Wave' },
-    { id: 1015, date: daysAgo(7, 15, 30), category_id: 7, subcategory_id: 18, amount: 1500, payment_method: 'UPI', account_id: 1, credit_card_id: null, cc_payment_type: null, notes: 'Gym membership — monthly' },
+    { id: 1015, date: daysAgo(7, 15, 30), category_id: 7, subcategory_id: 18, amount: 1500, payment_method: 'UPI', account_id: 4, credit_card_id: null, cc_payment_type: null, notes: 'Gym membership — monthly' },
     { id: 1016, date: daysAgo(8, 20, 0), category_id: 4, subcategory_id: 10, amount: 600, payment_method: 'Credit Card', account_id: null, credit_card_id: 1, cc_payment_type: null, notes: 'PVR — movie + popcorn' },
     { id: 1017, date: daysAgo(9, 10, 0), category_id: 3, subcategory_id: 7, amount: 2200, payment_method: 'Credit Card', account_id: null, credit_card_id: 1, cc_payment_type: null, notes: 'Myntra — T-shirts' },
     { id: 1018, date: daysAgo(10, 14, 0), category_id: 2, subcategory_id: 5, amount: 1800, payment_method: 'UPI', account_id: 1, credit_card_id: null, cc_payment_type: null, notes: 'Petrol — bike' },
 
     // Previous month (30–50 days ago, for analytics)
-    { id: 1019, date: daysAgo(32, 11, 0), category_id: 5, subcategory_id: 12, amount: 15000, payment_method: 'Savings Account', account_id: 1, credit_card_id: null, cc_payment_type: null, notes: 'Room rent' },
+    { id: 1019, date: daysAgo(32, 11, 0), category_id: 5, subcategory_id: 12, amount: 15000, payment_method: 'Salary Account', account_id: 4, credit_card_id: null, cc_payment_type: null, notes: 'Room rent' },
     { id: 1020, date: daysAgo(33, 12, 0), category_id: 6, subcategory_id: 16, amount: 3200, payment_method: 'UPI', account_id: 1, credit_card_id: null, cc_payment_type: null, notes: 'Monthly groceries — D-Mart' },
     { id: 1021, date: daysAgo(35, 14, 0), category_id: 1, subcategory_id: 1, amount: 950, payment_method: 'Credit Card', account_id: null, credit_card_id: 1, cc_payment_type: null, notes: 'Birthday dinner treat' },
-    { id: 1022, date: daysAgo(38, 10, 0), category_id: 5, subcategory_id: 13, amount: 1100, payment_method: 'UPI', account_id: 1, credit_card_id: null, cc_payment_type: null, notes: 'Electricity bill — prev month' },
+    { id: 1022, date: daysAgo(38, 10, 0), category_id: 5, subcategory_id: 13, amount: 1100, payment_method: 'UPI', account_id: 4, credit_card_id: null, cc_payment_type: null, notes: 'Electricity bill — prev month' },
     { id: 1023, date: daysAgo(40, 16, 0), category_id: 3, subcategory_id: 8, amount: 4500, payment_method: 'Credit Card', account_id: null, credit_card_id: 2, cc_payment_type: null, notes: 'boAt earbuds — Amazon' },
-    { id: 1024, date: daysAgo(42, 9, 0), category_id: 9, subcategory_id: null, amount: 12500, payment_method: 'Savings Account', account_id: 1, credit_card_id: 1, cc_payment_type: 'Full Payment', notes: 'HDFC Millennia CC bill payment' },
+    { id: 1024, date: daysAgo(42, 9, 0), category_id: 9, subcategory_id: null, amount: 12500, payment_method: 'Salary Account', account_id: 4, credit_card_id: 1, cc_payment_type: 'Full Payment', notes: 'HDFC Millennia CC bill payment' },
     { id: 1025, date: daysAgo(45, 12, 0), category_id: 2, subcategory_id: 4, amount: 340, payment_method: 'UPI', account_id: 1, credit_card_id: null, cc_payment_type: null, notes: 'Ola to airport' },
   ];
 }
@@ -111,11 +111,11 @@ export function getDefaultTransactions() {
 // ── Income (generated with fresh dates) ────────────────────────
 export function getDefaultIncome() {
   return [
-    { id: 2001, date: dateOnly(1), source: 'Salary', amount: 65000, account_id: 1, notes: 'Monthly salary credited' },
-    { id: 2002, date: dateOnly(12), source: 'Freelance', amount: 12000, account_id: 1, notes: 'Logo design project — client' },
-    { id: 2003, date: dateOnly(18), source: 'Interest', amount: 350, account_id: 1, notes: 'FD quarterly interest' },
+    { id: 2001, date: dateOnly(1), source: 'Salary', amount: 65000, account_id: 4, notes: 'Monthly salary credited' },
+    { id: 2002, date: dateOnly(12), source: 'Bonus', amount: 12000, account_id: 4, notes: 'Performance bonus' },
+    { id: 2003, date: dateOnly(18), source: 'Interest', amount: 350, account_id: 4, notes: 'FD quarterly interest' },
     // Previous month
-    { id: 2004, date: dateOnly(32), source: 'Salary', amount: 65000, account_id: 1, notes: 'Monthly salary' },
-    { id: 2005, date: dateOnly(48), source: 'Freelance', amount: 8000, account_id: 1, notes: 'Website maintenance contract' },
+    { id: 2004, date: dateOnly(32), source: 'Salary', amount: 65000, account_id: 4, notes: 'Monthly salary' },
+    { id: 2005, date: dateOnly(48), source: 'Bonus', amount: 8000, account_id: 4, notes: 'Freelance project bonus' },
   ];
 }

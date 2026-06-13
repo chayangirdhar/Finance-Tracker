@@ -23,6 +23,10 @@ export default function TopBar() {
   const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59).toISOString();
 
   useEffect(() => {
+    const salaryAccountIds = accounts
+      .filter((a) => a.is_salary_default)
+      .map((a) => a.id);
+
     // Demo mode: compute from demo data
     if (!isAuthenticated && demoData) {
       const mStart = new Date(now.getFullYear(), now.getMonth(), 1);
@@ -30,7 +34,7 @@ export default function TopBar() {
       const totalIncome = (demoData.income || [])
         .filter((i) => {
           const d = new Date(i.date);
-          return d >= mStart && d <= mEnd;
+          return d >= mStart && d <= mEnd && i.account_id && salaryAccountIds.includes(Number(i.account_id));
         })
         .reduce((s, i) => s + Number(i.amount), 0);
       const totalExpenses = (demoData.transactions || [])
@@ -49,7 +53,7 @@ export default function TopBar() {
         const [incRes, expRes] = await Promise.all([
           supabase
             .from('income')
-            .select('amount')
+            .select('amount, account_id')
             .gte('date', format(new Date(now.getFullYear(), now.getMonth(), 1), 'yyyy-MM-dd'))
             .lte('date', format(new Date(now.getFullYear(), now.getMonth() + 1, 0), 'yyyy-MM-dd')),
           supabase
@@ -59,7 +63,9 @@ export default function TopBar() {
             .lte('date', monthEnd),
         ]);
 
-        const totalIncome = (incRes.data || []).reduce((s, r) => s + Number(r.amount), 0);
+        const totalIncome = (incRes.data || [])
+          .filter((i) => i.account_id && salaryAccountIds.includes(Number(i.account_id)))
+          .reduce((s, r) => s + Number(r.amount), 0);
         const totalExpenses = (expRes.data || []).reduce((s, r) => s + Number(r.amount), 0);
         setQuickStats({ income: totalIncome, expenses: totalExpenses });
       } catch {
@@ -67,7 +73,7 @@ export default function TopBar() {
       }
     }
     fetchQuickStats();
-  }, [monthStart, monthEnd, isAuthenticated, demoData?.transactions, demoData?.income]);
+  }, [monthStart, monthEnd, isAuthenticated, demoData?.transactions, demoData?.income, accounts]);
 
   const net = quickStats.income - quickStats.expenses;
 

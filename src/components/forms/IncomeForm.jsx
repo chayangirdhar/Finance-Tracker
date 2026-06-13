@@ -7,7 +7,7 @@ import CurrencyInput from '../shared/CurrencyInput';
 import toast from 'react-hot-toast';
 import { format } from 'date-fns';
 
-const INCOME_SOURCES = ['Salary', 'Gig Work', 'Freelance', 'Bonus', 'Interest', 'Dividend', 'Refund', 'Other'];
+const INCOME_SOURCES = ['Salary', 'Bonus', 'Interest', 'Debt Repayment'];
 
 export default function IncomeForm({ onSaved }) {
   const { accounts } = useApp();
@@ -16,7 +16,6 @@ export default function IncomeForm({ onSaved }) {
 
   const [date, setDate] = useState(format(new Date(), 'yyyy-MM-dd'));
   const [source, setSource] = useState('');
-  const [customSource, setCustomSource] = useState('');
   const [amount, setAmount] = useState(0);
   const [accountId, setAccountId] = useState('');
   const [notes, setNotes] = useState('');
@@ -45,7 +44,6 @@ export default function IncomeForm({ onSaved }) {
   const resetForm = () => {
     setDate(format(new Date(), 'yyyy-MM-dd'));
     setSource('');
-    setCustomSource('');
     setAmount(0);
     const defaultAcc = accounts.find((acc) => acc.is_salary_default);
     setAccountId(defaultAcc ? String(defaultAcc.id) : '');
@@ -55,8 +53,7 @@ export default function IncomeForm({ onSaved }) {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    const finalSource = source === 'Other' ? customSource.trim() : source;
-    if (!finalSource) { toast.error('Select an income source'); return; }
+    if (!source) { toast.error('Select an income source'); return; }
     if (!amount || amount <= 0) { toast.error('Enter a valid amount'); return; }
 
     setSaving(true);
@@ -66,7 +63,7 @@ export default function IncomeForm({ onSaved }) {
 
       const payload = {
         date,
-        source: finalSource,
+        source: source,
         amount: Math.round(amount * 100) / 100,
         account_id: finalAccountId,
         notes: notes.trim() || null,
@@ -119,19 +116,7 @@ export default function IncomeForm({ onSaved }) {
         </select>
       </div>
 
-      {/* Custom source input */}
-      {source === 'Other' && (
-        <div className="animate-slide-up">
-          <label className="label">Custom Source</label>
-          <input
-            type="text"
-            value={customSource}
-            onChange={(e) => setCustomSource(e.target.value)}
-            className="input-glass"
-            placeholder="Describe the income source..."
-          />
-        </div>
-      )}
+
 
       {/* Destination Account */}
       <div>

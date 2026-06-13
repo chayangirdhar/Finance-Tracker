@@ -254,20 +254,29 @@ export default function Analytics() {
   const getCCName = (id) => creditCards.find((c) => c.id === id)?.name || '';
   const fmt = (n) => fmtINR(n);
 
+  // Filter income to only count deposits into default salary accounts
+  const salaryAccountIds = useMemo(() => {
+    return accounts.filter((a) => a.is_salary_default).map((a) => a.id);
+  }, [accounts]);
+
+  const filteredIncome = useMemo(() => {
+    return allIncome.filter((i) => i.account_id && salaryAccountIds.includes(Number(i.account_id)));
+  }, [allIncome, salaryAccountIds]);
+
   // ─── Monthly stats for selected chart month ───────────────────
   const currentMonthStats = useMemo(() => {
     if (categories.length === 0) return null;
     const [year, month] = chartMonth.split('-').map(Number);
     const monthStart = new Date(year, month - 1, 1);
-    return computeMonthStats(allTxns, allIncome, monthStart, categories, catOpts);
-  }, [allTxns, allIncome, chartMonth, categories, catOpts]);
+    return computeMonthStats(allTxns, filteredIncome, monthStart, categories, catOpts);
+  }, [allTxns, filteredIncome, chartMonth, categories, catOpts]);
 
   const prevMonthStats = useMemo(() => {
     if (categories.length === 0) return null;
     const [year, month] = chartMonth.split('-').map(Number);
     const prev = subMonths(new Date(year, month - 1, 1), 1);
-    return computeMonthStats(allTxns, allIncome, prev, categories, catOpts);
-  }, [allTxns, allIncome, chartMonth, categories, catOpts]);
+    return computeMonthStats(allTxns, filteredIncome, prev, categories, catOpts);
+  }, [allTxns, filteredIncome, chartMonth, categories, catOpts]);
 
   // MoM change
   const momChange = useMemo(() => {
@@ -368,8 +377,8 @@ export default function Analytics() {
   const fyMonths = useMemo(() => getFinancialYearMonths(), []);
   const yearlyStats = useMemo(() => {
     if (categories.length === 0) return [];
-    return fyMonths.map((m) => computeMonthStats(allTxns, allIncome, m, categories, catOpts));
-  }, [allTxns, allIncome, fyMonths, categories, catOpts]);
+    return fyMonths.map((m) => computeMonthStats(allTxns, filteredIncome, m, categories, catOpts));
+  }, [allTxns, filteredIncome, fyMonths, categories, catOpts]);
 
   // Annual aggregates
   const annualAgg = useMemo(() => {

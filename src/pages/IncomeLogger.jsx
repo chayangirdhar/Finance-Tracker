@@ -80,10 +80,13 @@ export default function IncomeLogger() {
 
   const getAccountName = (id) => accounts.find((a) => a.id === id)?.name || '—';
 
-  const monthTotal = incomeEntries.reduce((s, e) => s + Number(e.amount), 0);
+  const salaryAccountIds = accounts.filter((a) => a.is_salary_default).map((a) => a.id);
+  const salaryIncomeEntries = incomeEntries.filter((e) => e.account_id && salaryAccountIds.includes(Number(e.account_id)));
+
+  const monthTotal = salaryIncomeEntries.reduce((s, e) => s + Number(e.amount), 0);
 
   // Group by source
-  const bySource = incomeEntries.reduce((acc, entry) => {
+  const bySource = salaryIncomeEntries.reduce((acc, entry) => {
     if (!acc[entry.source]) acc[entry.source] = 0;
     acc[entry.source] += Number(entry.amount);
     return acc;
