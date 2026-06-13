@@ -81,8 +81,6 @@ export default function ExpenseForm({ onSaved }) {
     setAmount(0);
     setPaymentMethod('Salary Account');
     setCreditCardId('');
-    const defaultAcc = accounts.find((acc) => acc.is_salary_default);
-    setAccountId(defaultAcc ? String(defaultAcc.id) : '');
     setCcPaymentType('');
     setNotes('');
     setIsCCPayment(false);
@@ -143,11 +141,10 @@ export default function ExpenseForm({ onSaved }) {
       <button
         type="button"
         onClick={() => setIsCCPayment(!isCCPayment)}
-        className={`w-full flex items-center gap-3 p-3 rounded-xl border transition-all duration-200 text-sm font-medium ${
-          isCCPayment
+        className={`w-full flex items-center gap-3 p-3 rounded-xl border transition-all duration-200 text-sm font-medium ${isCCPayment
             ? 'border-accent-500/30 bg-accent-500/10 text-accent-300'
             : 'border-white/[0.08] bg-white/[0.03] text-surface-400 hover:bg-white/[0.05]'
-        }`}
+          }`}
       >
         <ArrowRightLeft size={16} />
         Paying Credit Card Bill

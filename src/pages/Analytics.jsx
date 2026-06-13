@@ -24,6 +24,7 @@ import {
   BarChart3,
   ArrowUpRight,
   ArrowDownRight,
+  Loader2,
 } from 'lucide-react';
 import {
   PieChart,
@@ -77,13 +78,30 @@ export default function Analytics() {
   const [currentPage, setCurrentPage] = useState(1);
   const [chartMonth, setChartMonth] = useState(format(new Date(), 'yyyy-MM'));
 
+  // Ledger state
+  const [ledgerTxns, setLedgerTxns] = useState([]);
+  const [ledgerTotalCount, setLedgerTotalCount] = useState(0);
+  const [ledgerLoading, setLedgerLoading] = useState(false);
+
   const fetchData = useCallback(async () => {
     if (!isAuthenticated) return;
     try {
       setLoading(true);
+      const months = getFinancialYearMonths();
+      const startDate = format(months[0], 'yyyy-MM-01');
+      const endDate = format(endOfMonth(months[11]), 'yyyy-MM-dd');
+
       const [txnRes, incRes] = await Promise.all([
-        supabase.from('transactions').select('*').order('date', { ascending: false }).limit(5000),
-        supabase.from('income').select('*').order('date', { ascending: false }).limit(2000),
+        supabase.from('transactions')
+          .select('*')
+          .gte('date', startDate)
+          .lte('date', `${endDate}T23:59:59`)
+          .order('date', { ascending: false }),
+        supabase.from('income')
+          .select('*')
+          .gte('date', startDate)
+          .lte('date', `${endDate}T23:59:59`)
+          .order('date', { ascending: false }),
       ]);
       if (txnRes.error) throw txnRes.error;
       if (incRes.error) throw incRes.error;
@@ -95,6 +113,109 @@ export default function Analytics() {
       setLoading(false);
     }
   }, [isAuthenticated]);
+
+  const fetchLedger = useCallback(async () => {
+    const hasQuery = searchQuery.trim() !== '' || dateFrom !== '' || dateTo !== '' || filterCategory !== '';
+
+    if (!isAuthenticated) {
+      // Demo mode: filter local demoData.transactions
+      let results = [...(demoData?.transactions || [])];
+      if (searchQuery) {
+        const q = searchQuery.toLowerCase();
+        results = results.filter((t) => {
+          const catName = (categories.find((c) => c.id === t.category_id)?.name || 'Unknown').toLowerCase();
+          const subName = (subcategories.find((s) => s.id === t.subcategory_id)?.name || '').toLowerCase();
+          const notes = (t.notes || '').toLowerCase();
+          return catName.includes(q) || subName.includes(q) || notes.includes(q);
+        });
+      }
+      if (dateFrom) {
+        results = results.filter((t) => {
+          const localDate = format(new Date(t.date), 'yyyy-MM-dd');
+          return localDate >= dateFrom;
+        });
+      }
+      if (dateTo) {
+        results = results.filter((t) => {
+          const localDate = format(new Date(t.date), 'yyyy-MM-dd');
+          return localDate <= dateTo;
+        });
+      }
+      if (filterCategory) {
+        results = results.filter((t) => t.category_id === Number(filterCategory));
+      }
+
+      setLedgerTotalCount(results.length);
+      
+      if (!hasQuery) {
+        setLedgerTxns(results.slice(0, 10));
+      } else {
+        const startIndex = (currentPage - 1) * PAGE_SIZE;
+        setLedgerTxns(results.slice(startIndex, startIndex + PAGE_SIZE));
+      }
+      return;
+    }
+
+    // Authenticated mode: Supabase query
+    try {
+      setLedgerLoading(true);
+      let query = supabase.from('transactions').select('*', { count: 'exact' });
+
+      if (filterCategory) {
+        query = query.eq('category_id', Number(filterCategory));
+      }
+      if (dateFrom) {
+        query = query.gte('date', dateFrom);
+      }
+      if (dateTo) {
+        query = query.lte('date', `${dateTo}T23:59:59`);
+      }
+      if (searchQuery) {
+        const q = searchQuery.toLowerCase();
+        const matchingCats = categories.filter(c => c.name.toLowerCase().includes(q)).map(c => c.id);
+        const matchingSubs = subcategories.filter(s => s.name.toLowerCase().includes(q)).map(s => s.id);
+        
+        let orFilter = `notes.ilike.%${searchQuery}%`;
+        if (matchingCats.length > 0) {
+          orFilter += `,category_id.in.(${matchingCats.join(',')})`;
+        }
+        if (matchingSubs.length > 0) {
+          orFilter += `,subcategory_id.in.(${matchingSubs.join(',')})`;
+        }
+        query = query.or(orFilter);
+      }
+
+      query = query.order('date', { ascending: false });
+
+      if (!hasQuery) {
+        query = query.limit(10);
+      } else {
+        const from = (currentPage - 1) * PAGE_SIZE;
+        const to = from + PAGE_SIZE - 1;
+        query = query.range(from, to);
+      }
+
+      const { data, error, count } = await query;
+      if (error) throw error;
+
+      setLedgerTxns(data || []);
+      setLedgerTotalCount(count || 0);
+    } catch (err) {
+      console.error('Failed to fetch ledger transactions:', err);
+    } finally {
+      setLedgerLoading(false);
+    }
+  }, [
+    isAuthenticated,
+    searchQuery,
+    dateFrom,
+    dateTo,
+    filterCategory,
+    currentPage,
+    demoData?.transactions,
+    categories,
+    subcategories,
+  ]);
 
   useEffect(() => {
     if (isAuthenticated) {
@@ -109,6 +230,10 @@ export default function Analytics() {
       setLoading(false);
     }
   }, [isAuthenticated, demoData?.transactions, demoData?.income]);
+
+  useEffect(() => {
+    fetchLedger();
+  }, [fetchLedger]);
 
   // ─── Category ID lookups ──────────────────────────────────────
   const catOpts = useMemo(() => {
@@ -255,6 +380,7 @@ export default function Analytics() {
     const totalIncome = yearlyStats.reduce((s, m) => s + m.totalIncome, 0);
     const totalExpenses = yearlyStats.reduce((s, m) => s + m.totalExpenses, 0);
     const totalDiscretionary = yearlyStats.reduce((s, m) => s + m.discretionary, 0);
+    const totalFixedBills = yearlyStats.reduce((s, m) => s + m.fixedBills, 0);
     const allMedians = activeMonths.map((m) => m.medianTxn);
     const allSavingsRates = activeMonths.filter((m) => m.totalIncome > 0).map((m) => m.savingsRate);
     const allMaxTxns = activeMonths.map((m) => m.maxTxn);
@@ -279,6 +405,22 @@ export default function Analytics() {
       ? allTxnAmounts.reduce((a, b) => (a.amount > b.amount ? a : b))
       : null;
 
+    const activeRecurringRatios = activeMonths
+      .filter((m) => m.totalIncome > 0)
+      .map((m) => m.recurringRatio);
+    const avgRecurringRatio = mean(activeRecurringRatios);
+    const avgMonthlyFixedBills = totalFixedBills / (activeMonths.length || 1);
+
+    // Savings Consistency Index (excluding saving/investment transactions)
+    const savingMonths = activeMonths.filter((s) => {
+      const adjustedExpenses = s.totalExpenses - s.savings - s.investment;
+      const adjustedSavings = s.totalIncome - adjustedExpenses;
+      return adjustedSavings > 0;
+    });
+    const savingsConsistency = activeMonths.length > 0
+      ? (savingMonths.length / activeMonths.length) * 100
+      : 0;
+
     return {
       totalIncome,
       totalExpenses,
@@ -291,6 +433,10 @@ export default function Analytics() {
       worstMonth,
       avgSavingsRate: mean(allSavingsRates),
       activeMonthCount: activeMonths.length,
+      avgMonthlyFixedBills,
+      avgRecurringRatio,
+      savingsConsistency,
+      savingMonthsCount: savingMonths.length,
     };
   }, [yearlyStats, allTxns]);
 
@@ -312,6 +458,7 @@ export default function Analytics() {
         const { error } = await supabase.from('transactions').delete().eq('id', id);
         if (error) throw error;
         fetchData();
+        fetchLedger();
       } else if (demoData) {
         demoData.deleteTransaction(id);
       }
@@ -396,9 +543,9 @@ export default function Analytics() {
           donutData={donutData}
           donutTotal={donutTotal}
           areaData={areaData}
-          filteredTxns={filteredTxns}
-          paginatedTxns={paginatedTxns}
-          totalPages={totalPages}
+          filteredTxns={ledgerTxns}
+          paginatedTxns={ledgerTxns}
+          totalPages={searchQuery.trim() !== '' || dateFrom !== '' || dateTo !== '' || filterCategory !== '' ? Math.ceil(ledgerTotalCount / PAGE_SIZE) : 1}
           currentPage={currentPage}
           setCurrentPage={setCurrentPage}
           searchQuery={searchQuery}
@@ -418,6 +565,9 @@ export default function Analytics() {
           fmt={fmt}
           DonutTooltip={DonutTooltip}
           GlassTooltip={GlassTooltip}
+          totalRecords={ledgerTotalCount}
+          hasQuery={searchQuery.trim() !== '' || dateFrom !== '' || dateTo !== '' || filterCategory !== ''}
+          ledgerLoading={ledgerLoading}
         />
       ) : (
         <YearlyView
@@ -446,6 +596,7 @@ function MonthlyView({
   filterCategory, setFilterCategory,
   categories, getCategoryName, getSubcategoryName, getAccountName, getCCName,
   handleDeleteTxn, fmt, DonutTooltip, GlassTooltip,
+  totalRecords, hasQuery, ledgerLoading,
 }) {
   const stats = currentMonthStats;
 
@@ -554,7 +705,7 @@ function MonthlyView({
             label="Recurring Ratio"
             value={`${stats.recurringRatio.toFixed(1)}%`}
             color={stats.recurringRatio > 50 ? 'expense' : 'accent'}
-            sublabel="Fixed Bills ÷ Income"
+            sublabel={`Fixed Bills: ₹${fmt(stats.fixedBills)}`}
             tooltip="The portion of your income consumed by fixed monthly bills (Fixed Bills / Income)."
           />
         </div>
@@ -678,7 +829,9 @@ function MonthlyView({
           <div className="flex items-center gap-3">
             <PieChartIcon size={20} className="text-accent-400" />
             <h2 className="text-lg font-bold text-white">Transaction Ledger</h2>
-            <span className="badge-neutral">{filteredTxns.length} records</span>
+            <span className="badge-neutral">
+              {hasQuery ? `${totalRecords} records` : 'Latest 10 records'}
+            </span>
           </div>
         </div>
 
@@ -719,7 +872,12 @@ function MonthlyView({
         </div>
 
         {/* Table */}
-        {filteredTxns.length === 0 ? (
+        {ledgerLoading ? (
+          <div className="flex flex-col items-center justify-center py-12 text-surface-400">
+            <Loader2 className="w-8 h-8 animate-spin text-accent-400 mb-2" />
+            <p className="text-sm">Querying ledger...</p>
+          </div>
+        ) : filteredTxns.length === 0 ? (
           <EmptyState
             icon={PieChartIcon}
             title="No transactions found"
@@ -950,10 +1108,10 @@ function YearlyView({ yearlyStats, annualAgg, lineData, categories, getCategoryN
         )}
       </div>
 
-      {/* Discretionary Insights Panel */}
+      {/* Financial & Spending Insights Panel */}
       {annualAgg && (
         <div className="glass-card-static p-4 sm:p-6">
-          <h3 className="text-sm font-bold text-white mb-5">Discretionary Insights</h3>
+          <h3 className="text-sm font-bold text-white mb-5">Financial & Spending Insights</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             <InsightCard
               label="Avg Monthly Discretionary"
@@ -968,6 +1126,12 @@ function YearlyView({ yearlyStats, annualAgg, lineData, categories, getCategoryN
               value={`₹${fmt(annualAgg.avgOfMonthlyMedians)}`}
             />
             <InsightCard
+              label="Avg Monthly Fixed Bills"
+              value={`₹${fmt(annualAgg.avgMonthlyFixedBills)}`}
+              sublabel={`${annualAgg.avgRecurringRatio.toFixed(1)}% of income (avg)`}
+              color="accent"
+            />
+            <InsightCard
               label="Highest Single Transaction"
               value={annualAgg.highestTxn ? `₹${fmt(annualAgg.highestTxn.amount)}` : '—'}
               sublabel={annualAgg.highestTxn
@@ -975,26 +1139,20 @@ function YearlyView({ yearlyStats, annualAgg, lineData, categories, getCategoryN
                 : ''}
             />
             <InsightCard
-              label="Best Month — Savings Rate"
-              value={annualAgg.bestMonth ? annualAgg.bestMonth.label : '—'}
-              sublabel={annualAgg.bestMonth ? `${annualAgg.bestMonth.savingsRate.toFixed(1)}%` : ''}
+              label="Best Savings Month"
+              value={annualAgg.bestMonth ? `${annualAgg.bestMonth.label} (${annualAgg.bestMonth.savingsRate.toFixed(1)}%)` : '—'}
               color="income"
             />
             <InsightCard
-              label="Worst Month — Savings Rate"
-              value={annualAgg.worstMonth ? annualAgg.worstMonth.label : '—'}
-              sublabel={annualAgg.worstMonth ? `${annualAgg.worstMonth.savingsRate.toFixed(1)}%` : ''}
+              label="Worst Savings Month"
+              value={annualAgg.worstMonth ? `${annualAgg.worstMonth.label} (${annualAgg.worstMonth.savingsRate.toFixed(1)}%)` : '—'}
               color="expense"
             />
             <InsightCard
-              label="Best Savings Rate"
-              value={annualAgg.bestMonth ? `${annualAgg.bestMonth.savingsRate.toFixed(1)}%` : '—'}
-              color="income"
-            />
-            <InsightCard
-              label="Worst Savings Rate"
-              value={annualAgg.worstMonth ? `${annualAgg.worstMonth.savingsRate.toFixed(1)}%` : '—'}
-              color="expense"
+              label="Savings Consistency"
+              value={annualAgg.savingsConsistency !== undefined ? `${annualAgg.savingsConsistency.toFixed(1)}%` : '—'}
+              sublabel={annualAgg.savingMonthsCount !== undefined ? `${annualAgg.savingMonthsCount} of ${annualAgg.activeMonthCount} active months` : ''}
+              color={annualAgg.savingsConsistency >= 70 ? 'income' : annualAgg.savingsConsistency >= 40 ? 'accent' : 'expense'}
             />
             <InsightCard
               label="Avg Savings Rate (Year)"
