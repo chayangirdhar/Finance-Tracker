@@ -11,71 +11,57 @@ import CreditCardForm from '../forms/CreditCardForm';
 import { useApp } from '../../context/AppContext';
 
 export default function TopBar() {
-  const { accounts, creditCards } = useApp();
+  const { accounts, creditCards, categories } = useApp();
   const { isAuthenticated, signOut } = useAuth();
   const demoData = useDemoData();
   const [showSettings, setShowSettings] = useState(false);
   const [showLogin, setShowLogin] = useState(false);
-  const [quickStats, setQuickStats] = useState({ income: 0, expenses: 0 });
+  const [discretionarySpend, setDiscretionarySpend] = useState(0);
 
   const now = new Date();
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
   const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59).toISOString();
 
   useEffect(() => {
-    const salaryAccountIds = accounts
-      .filter((a) => a.is_salary_default)
-      .map((a) => a.id);
+    const excludedCatIds = (categories || [])
+      .filter((c) => ['Added to Savings', 'Investment', 'Credit Card Payment'].includes(c.name))
+      .map((c) => c.id);
 
     // Demo mode: compute from demo data
     if (!isAuthenticated && demoData) {
       const mStart = new Date(now.getFullYear(), now.getMonth(), 1);
       const mEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
-      const totalIncome = (demoData.income || [])
-        .filter((i) => {
-          const d = new Date(i.date);
-          return d >= mStart && d <= mEnd && i.account_id && salaryAccountIds.includes(Number(i.account_id));
-        })
-        .reduce((s, i) => s + Number(i.amount), 0);
-      const totalExpenses = (demoData.transactions || [])
+      const totalDiscretionary = (demoData.transactions || [])
         .filter((t) => {
           const d = new Date(t.date);
-          return d >= mStart && d <= mEnd;
+          return d >= mStart && d <= mEnd && !excludedCatIds.includes(t.category_id);
         })
         .reduce((s, t) => s + Number(t.amount), 0);
-      setQuickStats({ income: totalIncome, expenses: totalExpenses });
+      setDiscretionarySpend(totalDiscretionary);
       return;
     }
 
     // Authenticated: fetch from Supabase
     async function fetchQuickStats() {
       try {
-        const [incRes, expRes] = await Promise.all([
-          supabase
-            .from('income')
-            .select('amount, account_id')
-            .gte('date', format(new Date(now.getFullYear(), now.getMonth(), 1), 'yyyy-MM-dd'))
-            .lte('date', format(new Date(now.getFullYear(), now.getMonth() + 1, 0), 'yyyy-MM-dd')),
-          supabase
-            .from('transactions')
-            .select('amount')
-            .gte('date', monthStart)
-            .lte('date', monthEnd),
-        ]);
+        const { data, error } = await supabase
+          .from('transactions')
+          .select('amount, category_id')
+          .gte('date', monthStart)
+          .lte('date', monthEnd);
 
-        const totalIncome = (incRes.data || [])
-          .filter((i) => i.account_id && salaryAccountIds.includes(Number(i.account_id)))
+        if (error) throw error;
+
+        const totalDiscretionary = (data || [])
+          .filter((t) => !excludedCatIds.includes(t.category_id))
           .reduce((s, r) => s + Number(r.amount), 0);
-        const totalExpenses = (expRes.data || []).reduce((s, r) => s + Number(r.amount), 0);
-        setQuickStats({ income: totalIncome, expenses: totalExpenses });
+        setDiscretionarySpend(totalDiscretionary);
       } catch {
         // Silently fail for quick stats
       }
     }
     fetchQuickStats();
-  }, [monthStart, monthEnd, isAuthenticated, demoData?.transactions, demoData?.income, accounts]);
-
-  const net = quickStats.income - quickStats.expenses;
+  }, [monthStart, monthEnd, isAuthenticated, demoData?.transactions, categories]);
 
   return (
     <>
@@ -89,30 +75,13 @@ export default function TopBar() {
           </div>
         </div>
 
-        {/* Center: Quick Stats */}
-        <div className="hidden md:flex items-center gap-6">
-          <div className="flex items-center gap-2">
-            <TrendingUp size={14} className="text-income-400" />
-            <span className="text-xs font-medium text-surface-400">Income</span>
-            <span className="text-sm font-bold text-income-400">
-              ₹{quickStats.income.toLocaleString('en-IN')}
-            </span>
-          </div>
-          <div className="w-px h-5 bg-white/[0.08]" />
-          <div className="flex items-center gap-2">
-            <TrendingDown size={14} className="text-expense-400" />
-            <span className="text-xs font-medium text-surface-400">Spent</span>
-            <span className="text-sm font-bold text-expense-400">
-              ₹{quickStats.expenses.toLocaleString('en-IN')}
-            </span>
-          </div>
-          <div className="w-px h-5 bg-white/[0.08]" />
-          <div className="flex items-center gap-2">
-            <span className="text-xs font-medium text-surface-400">Net</span>
-            <span className={`text-sm font-bold ${net >= 0 ? 'text-income-400' : 'text-expense-400'}`}>
-              {net >= 0 ? '+' : ''}₹{Math.abs(net).toLocaleString('en-IN')}
-            </span>
-          </div>
+        {/* Center: Discretionary Spend */}
+        <div className="hidden md:flex items-center gap-2">
+          <TrendingDown size={14} className="text-expense-400" />
+          <span className="text-xs font-medium text-surface-400">Total Spend</span>
+          <span className="text-sm font-bold text-expense-400">
+            ₹{discretionarySpend.toLocaleString('en-IN')}
+          </span>
         </div>
 
         {/* Right: Actions */}
