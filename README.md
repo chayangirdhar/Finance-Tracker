@@ -90,8 +90,8 @@ Follow these steps to run the project locally on your machine:
 
 ### 1. Clone the Repository
 ```bash
-git clone <your-repository-url>
-cd Tracker
+git clone https://github.com/chayangirdhar/Finance-Tracker.git
+cd Finance-Tracker
 ```
 
 ### 2. Install Dependencies

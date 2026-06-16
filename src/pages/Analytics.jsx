@@ -631,7 +631,7 @@ function MonthlyView({
             value={`${stats.savingsRate.toFixed(1)}%`}
             color={stats.savingsRate >= 20 ? 'income' : stats.savingsRate >= 0 ? 'accent' : 'expense'}
             sublabel={stats.savingsRate >= 20 ? 'Healthy' : stats.savingsRate >= 0 ? 'Moderate' : 'Deficit'}
-            tooltip="Percentage of your income that was saved (Income - Expenses) / Income."
+            tooltip="Percentage of your income that was saved: Amount transfered to saving account / Income."
           />
           <KPICard
             icon={Activity}

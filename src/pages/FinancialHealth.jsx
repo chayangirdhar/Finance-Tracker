@@ -24,6 +24,40 @@ import {
   Square
 } from 'lucide-react';
 
+const getBillingCycle = (dueDayVal) => {
+  const now = new Date();
+  const currentYear = now.getFullYear();
+  const currentMonth = now.getMonth();
+  const currentDay = now.getDate();
+  const dueDay = Number(dueDayVal) || 20;
+
+  const daysInPrevMonth = new Date(currentYear, currentMonth, 0).getDate();
+  const daysInCurMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
+  const daysInNextMonth = new Date(currentYear, currentMonth + 2, 0).getDate();
+
+  const prevDueDay = Math.min(dueDay, daysInPrevMonth);
+  const curDueDay = Math.min(dueDay, daysInCurMonth);
+  const nextDueDay = Math.min(dueDay, daysInNextMonth);
+
+  let cycleStart, cycleEnd;
+
+  if (currentDay <= curDueDay) {
+    cycleStart = new Date(currentYear, currentMonth - 1, prevDueDay, 0, 0, 0);
+    cycleEnd = new Date(currentYear, currentMonth, curDueDay, 23, 59, 59);
+  } else {
+    cycleStart = new Date(currentYear, currentMonth, curDueDay, 0, 0, 0);
+    cycleEnd = new Date(currentYear, currentMonth + 1, nextDueDay, 23, 59, 59);
+  }
+
+  return { cycleStart, cycleEnd };
+};
+
+const isTxnInCycle = (txnDateStr, cycleStart, cycleEnd) => {
+  if (!txnDateStr) return false;
+  const d = new Date(txnDateStr);
+  return d >= cycleStart && d <= cycleEnd;
+};
+
 export default function FinancialHealth() {
   const { accounts, creditCards, refreshAccounts, refreshCreditCards, updateCreditCard, getCategoryByName } = useApp();
   const { isAuthenticated } = useAuth();
@@ -89,7 +123,7 @@ export default function FinancialHealth() {
           .reduce((s, i) => s + Number(i.amount), 0);
 
         const expensesOut = (allTxns || [])
-          .filter((t) => t.account_id === acc.id)
+          .filter((t) => t.account_id === acc.id && t.payment_method !== 'Credit Card')
           .reduce((s, t) => s + Number(t.amount), 0);
 
         const savingsIn = (allTxns || [])
@@ -104,7 +138,7 @@ export default function FinancialHealth() {
           .reduce((s, i) => s + Number(i.amount), 0);
 
         const curMonthExpensesOut = (allTxns || [])
-          .filter((t) => t.account_id === acc.id && isInCurrentMonth(t.date))
+          .filter((t) => t.account_id === acc.id && t.payment_method !== 'Credit Card' && isInCurrentMonth(t.date))
           .reduce((s, t) => s + Number(t.amount), 0);
 
         const curMonthSavingsIn = (allTxns || [])
@@ -119,7 +153,7 @@ export default function FinancialHealth() {
           .reduce((s, i) => s + Number(i.amount), 0);
 
         const curMonthSalaryExpense = (allTxns || [])
-          .filter((t) => t.account_id === acc.id && isInCurrentMonth(t.date))
+          .filter((t) => t.account_id === acc.id && t.payment_method !== 'Credit Card' && isInCurrentMonth(t.date))
           .reduce((s, t) => s + Number(t.amount), 0);
 
         accStats[acc.id] = {
@@ -144,8 +178,10 @@ export default function FinancialHealth() {
 
         const owedDues = Number(cc.opening_dues) + cardSpend - billPayments;
         const available = Number(cc.credit_limit) - owedDues;
+        const dueDay = Number(cc.due_day) || 20;
+        const { cycleStart, cycleEnd } = getBillingCycle(dueDay);
         const paidThisMonth = (allTxns || [])
-          .some((t) => t.credit_card_id === cc.id && t.category_id === ccPayCatId && isInCurrentMonth(t.date));
+          .some((t) => t.credit_card_id === cc.id && t.category_id === ccPayCatId && isTxnInCycle(t.date, cycleStart, cycleEnd));
 
         cStats[cc.id] = {
           owedDues: Math.round(owedDues * 100) / 100,

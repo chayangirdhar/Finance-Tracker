@@ -112,7 +112,7 @@ export default function ExpenseForm({ onSaved }) {
         subcategory_id: subcategoryId ? Number(subcategoryId) : null,
         amount: Math.round(amount * 100) / 100,
         payment_method: paymentMethod,
-        account_id: accountId ? Number(accountId) : null,
+        account_id: (paymentMethod === 'Credit Card' || paymentMethod === 'Cash') ? null : (accountId ? Number(accountId) : null),
         credit_card_id: creditCardId ? Number(creditCardId) : null,
         cc_payment_type: isCreditCardPaymentCategory ? ccPaymentType || null : null,
         notes: [savingsPrefix, description, notes].filter(Boolean).join(' — ') || null,
