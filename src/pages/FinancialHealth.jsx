@@ -377,7 +377,7 @@ export default function FinancialHealth() {
                     <th>Account Name</th>
                     <th className="text-right">Salary Credited (M-T-D)</th>
                     <th className="text-right">Amount Spent (M-T-D)</th>
-                    <th className="text-right">Remaining Balance</th>
+                    <th className="text-right">Current Balance</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -385,14 +385,14 @@ export default function FinancialHealth() {
                     const stats = accountStats[acc.id] || {};
                     const credited = stats.salaryCredited || 0;
                     const spent = stats.salarySpent || 0;
-                    const remaining = Number(acc.opening_balance) + credited - spent;
+                    const balance = stats.liveBalance ?? Number(acc.opening_balance);
                     return (
                       <tr key={acc.id}>
                         <td className="font-semibold text-white">{acc.name}</td>
                         <td className="text-right text-income-400">₹{fmt(credited)}</td>
                         <td className="text-right text-expense-400">₹{fmt(spent)}</td>
-                        <td className={`text-right font-bold ${remaining >= 0 ? 'text-accent-400' : 'text-expense-400'}`}>
-                          ₹{fmt(remaining)}
+                        <td className={`text-right font-bold ${balance >= 0 ? 'text-accent-400' : 'text-expense-400'}`}>
+                          ₹{fmt(balance)}
                         </td>
                       </tr>
                     );
@@ -407,7 +407,7 @@ export default function FinancialHealth() {
                 const stats = accountStats[acc.id] || {};
                 const credited = stats.salaryCredited || 0;
                 const spent = stats.salarySpent || 0;
-                const remaining = Number(acc.opening_balance) + credited - spent;
+                const balance = stats.liveBalance ?? Number(acc.opening_balance);
                 return (
                   <div key={acc.id} className="p-4 rounded-xl border border-white/[0.06] bg-white/[0.02] space-y-3">
                     <div className="font-semibold text-white text-sm">{acc.name}</div>
@@ -421,9 +421,9 @@ export default function FinancialHealth() {
                         <p className="text-expense-400 font-bold">₹{fmt(spent)}</p>
                       </div>
                       <div className="col-span-2 border-t border-white/[0.04] pt-2 mt-1">
-                        <p className="text-surface-500 mb-0.5">Remaining Balance</p>
-                        <p className={`font-bold ${remaining >= 0 ? 'text-accent-400' : 'text-expense-400'}`}>
-                          ₹{fmt(remaining)}
+                        <p className="text-surface-500 mb-0.5">Current Balance</p>
+                        <p className={`font-bold ${balance >= 0 ? 'text-accent-400' : 'text-expense-400'}`}>
+                          ₹{fmt(balance)}
                         </p>
                       </div>
                     </div>
