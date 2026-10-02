@@ -6,7 +6,7 @@ import { useDemoData } from '../context/DemoContext';
 import ExpenseForm from '../components/forms/ExpenseForm';
 import EmptyState from '../components/shared/EmptyState';
 import { format, isToday, isYesterday } from 'date-fns';
-import { Receipt, Trash2, Clock, IndianRupee } from 'lucide-react';
+import { Receipt, Trash2, Clock, IndianRupee, Pencil, RotateCcw } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 export default function ExpenseLogger() {
@@ -15,6 +15,25 @@ export default function ExpenseLogger() {
   const demoData = useDemoData();
   const [transactions, setTransactions] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [editingTransaction, setEditingTransaction] = useState(null);
+  const [prefill, setPrefill] = useState(null);
+
+  const handleEdit = (txn) => {
+    setPrefill(null);
+    setEditingTransaction(txn);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleRepeat = (txn) => {
+    setEditingTransaction(null);
+    setPrefill(txn);
+    toast.success('Expense copied! Enter amount & save.');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleCancelEdit = () => {
+    setEditingTransaction(null);
+  };
 
   // Fetch from Supabase (authenticated mode)
   const fetchRecent = useCallback(async () => {
@@ -118,7 +137,16 @@ export default function ExpenseLogger() {
               <p className="text-xs text-surface-500">Record daily transactions</p>
             </div>
           </div>
-          <ExpenseForm onSaved={fetchRecent} />
+          <ExpenseForm
+            onSaved={() => {
+              fetchRecent();
+              setEditingTransaction(null);
+              setPrefill(null);
+            }}
+            editingTransaction={editingTransaction}
+            onCancelEdit={handleCancelEdit}
+            prefill={prefill}
+          />
         </div>
       </div>
 
@@ -163,7 +191,11 @@ export default function ExpenseLogger() {
                       {txns.map((txn) => (
                         <div
                           key={txn.id}
-                          className="group flex items-center gap-3 p-3 rounded-xl hover:bg-white/[0.03] transition-colors"
+                          className={`group flex items-center gap-3 p-3 rounded-xl transition-all ${
+                            editingTransaction?.id === txn.id
+                              ? 'bg-accent-500/10 border border-accent-500/30'
+                              : 'hover:bg-white/[0.03]'
+                          }`}
                         >
                           {/* Category color dot */}
                           <div className="w-2 h-2 rounded-full bg-expense-400 flex-shrink-0" />
@@ -199,12 +231,29 @@ export default function ExpenseLogger() {
                             ₹{Number(txn.amount).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                           </span>
 
-                          <button
-                            onClick={() => handleDelete(txn.id)}
-                            className="opacity-0 group-hover:opacity-100 text-surface-600 hover:text-expense-400 transition-all flex-shrink-0"
-                          >
-                            <Trash2 size={14} />
-                          </button>
+                          <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all flex-shrink-0">
+                            <button
+                              onClick={() => handleRepeat(txn)}
+                              className="p-1.5 rounded-lg text-surface-400 hover:text-accent-400 hover:bg-white/[0.06] transition-colors"
+                              title="Repeat this expense"
+                            >
+                              <RotateCcw size={14} />
+                            </button>
+                            <button
+                              onClick={() => handleEdit(txn)}
+                              className="p-1.5 rounded-lg text-surface-400 hover:text-amber-400 hover:bg-white/[0.06] transition-colors"
+                              title="Edit transaction"
+                            >
+                              <Pencil size={14} />
+                            </button>
+                            <button
+                              onClick={() => handleDelete(txn.id)}
+                              className="p-1.5 rounded-lg text-surface-400 hover:text-expense-400 hover:bg-white/[0.06] transition-colors"
+                              title="Delete transaction"
+                            >
+                              <Trash2 size={14} />
+                            </button>
+                          </div>
                         </div>
                       ))}
                     </div>
@@ -214,7 +263,11 @@ export default function ExpenseLogger() {
                       {txns.map((txn) => (
                         <div
                           key={txn.id}
-                          className="p-4 rounded-xl border border-white/[0.06] bg-white/[0.02] space-y-2 relative"
+                          className={`p-4 rounded-xl border space-y-2 relative transition-all ${
+                            editingTransaction?.id === txn.id
+                              ? 'border-accent-500/40 bg-accent-500/10'
+                              : 'border-white/[0.06] bg-white/[0.02]'
+                          }`}
                         >
                           <div className="flex items-center justify-between">
                             <span className="badge-expense !text-[10px]">
@@ -229,7 +282,7 @@ export default function ExpenseLogger() {
                               Sub-category: <span className="text-surface-300 font-medium">{getSubcategoryName(txn.subcategory_id)}</span>
                             </div>
                           )}
-                          <div className="text-[11px] text-surface-500 flex justify-between pr-6">
+                          <div className="text-[11px] text-surface-500 flex justify-between pr-24">
                             <span>{format(new Date(txn.date), 'h:mm a')}</span>
                             <span>
                               {txn.payment_method}
@@ -238,17 +291,33 @@ export default function ExpenseLogger() {
                             </span>
                           </div>
                           {txn.notes && (
-                            <p className="text-xs text-surface-600 border-t border-white/[0.04] pt-1.5 mt-1 pr-6">
+                            <p className="text-xs text-surface-600 border-t border-white/[0.04] pt-1.5 mt-1 pr-24">
                               {txn.notes}
                             </p>
                           )}
-                          <button
-                            onClick={() => handleDelete(txn.id)}
-                            className="absolute right-3 bottom-3 text-surface-500 hover:text-expense-400 transition-colors"
-                            title="Delete"
-                          >
-                            <Trash2 size={14} />
-                          </button>
+                          <div className="absolute right-3 bottom-3 flex items-center gap-1">
+                            <button
+                              onClick={() => handleRepeat(txn)}
+                              className="p-1.5 text-surface-400 hover:text-accent-400 transition-colors"
+                              title="Repeat this expense"
+                            >
+                              <RotateCcw size={14} />
+                            </button>
+                            <button
+                              onClick={() => handleEdit(txn)}
+                              className="p-1.5 text-surface-400 hover:text-amber-400 transition-colors"
+                              title="Edit transaction"
+                            >
+                              <Pencil size={14} />
+                            </button>
+                            <button
+                              onClick={() => handleDelete(txn.id)}
+                              className="p-1.5 text-surface-400 hover:text-expense-400 transition-colors"
+                              title="Delete transaction"
+                            >
+                              <Trash2 size={14} />
+                            </button>
+                          </div>
                         </div>
                       ))}
                     </div>

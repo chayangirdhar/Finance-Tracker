@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { format } from 'date-fns';
-import { Calendar, TrendingUp, TrendingDown, Settings, Lock, LogOut } from 'lucide-react';
+import { Calendar, TrendingUp, TrendingDown, Settings, Lock, LogOut, Sun, Sunrise, Sunset, Moon } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../context/AuthContext';
 import { useDemoData } from '../../context/DemoContext';
@@ -17,10 +17,30 @@ export default function TopBar() {
   const [showSettings, setShowSettings] = useState(false);
   const [showLogin, setShowLogin] = useState(false);
   const [discretionarySpend, setDiscretionarySpend] = useState(0);
+  const [todaySpend, setTodaySpend] = useState(0);
+  const [todayCount, setTodayCount] = useState(0);
 
   const now = new Date();
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
   const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59).toISOString();
+
+  // Greeting calculation based on current hour
+  const hour = now.getHours();
+  let greeting = 'Good evening';
+  let GreetingIcon = Sunset;
+  if (hour >= 5 && hour < 12) {
+    greeting = 'Good morning';
+    GreetingIcon = Sunrise;
+  } else if (hour >= 12 && hour < 17) {
+    greeting = 'Good afternoon';
+    GreetingIcon = Sun;
+  } else if (hour >= 17 && hour < 22) {
+    greeting = 'Good evening';
+    GreetingIcon = Sunset;
+  } else {
+    greeting = 'Good night';
+    GreetingIcon = Moon;
+  }
 
   useEffect(() => {
     const excludedCatIds = (categories || [])
@@ -31,13 +51,24 @@ export default function TopBar() {
     if (!isAuthenticated && demoData) {
       const mStart = new Date(now.getFullYear(), now.getMonth(), 1);
       const mEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
-      const totalDiscretionary = (demoData.transactions || [])
+      const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      const todayEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59);
+
+      const allDemoTxns = demoData.transactions || [];
+      const totalDiscretionary = allDemoTxns
         .filter((t) => {
           const d = new Date(t.date);
           return d >= mStart && d <= mEnd && !excludedCatIds.includes(t.category_id);
         })
         .reduce((s, t) => s + Number(t.amount), 0);
       setDiscretionarySpend(totalDiscretionary);
+
+      const todayTxns = allDemoTxns.filter((t) => {
+        const d = new Date(t.date);
+        return d >= todayStart && d <= todayEnd;
+      });
+      setTodaySpend(todayTxns.reduce((s, t) => s + Number(t.amount), 0));
+      setTodayCount(todayTxns.length);
       return;
     }
 
@@ -46,7 +77,7 @@ export default function TopBar() {
       try {
         const { data, error } = await supabase
           .from('transactions')
-          .select('amount, category_id')
+          .select('amount, category_id, date')
           .gte('date', monthStart)
           .lte('date', monthEnd);
 
@@ -56,6 +87,15 @@ export default function TopBar() {
           .filter((t) => !excludedCatIds.includes(t.category_id))
           .reduce((s, r) => s + Number(r.amount), 0);
         setDiscretionarySpend(totalDiscretionary);
+
+        const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        const todayEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59);
+        const todayTxns = (data || []).filter((t) => {
+          const d = new Date(t.date);
+          return d >= todayStart && d <= todayEnd;
+        });
+        setTodaySpend(todayTxns.reduce((s, t) => s + Number(t.amount), 0));
+        setTodayCount(todayTxns.length);
       } catch {
         // Silently fail for quick stats
       }
@@ -66,19 +106,35 @@ export default function TopBar() {
   return (
     <>
       <header className="flex items-center justify-between px-6 h-16 border-b border-white/[0.06]">
-        {/* Left: Date */}
+        {/* Left: Dynamic Greeting & Today's Summary */}
         <div className="flex items-center gap-3">
-          <Calendar size={16} className="text-accent-400" />
+          <div className="w-9 h-9 rounded-xl flex items-center justify-center bg-accent-500/10 text-accent-400">
+            <GreetingIcon size={18} />
+          </div>
           <div>
-            <h2 className="text-sm font-bold text-white">{format(now, 'MMMM yyyy')}</h2>
-            <p className="text-[10px] text-surface-500">{format(now, 'EEEE, d MMMM')}</p>
+            <div className="flex items-center gap-1.5">
+              <h2 className="text-sm font-bold text-white">{greeting}</h2>
+              <span className="text-[10px] text-surface-500 font-medium hidden sm:inline">
+                · {format(now, 'EEEE, d MMM')}
+              </span>
+            </div>
+            <p className="text-[11px] text-surface-400 font-medium">
+              {todayCount > 0 ? (
+                <>
+                  Today: <span className="font-semibold text-expense-400">₹{todaySpend.toLocaleString('en-IN')}</span>
+                  <span className="text-surface-500"> ({todayCount} {todayCount === 1 ? 'txn' : 'txns'})</span>
+                </>
+              ) : (
+                <span className="text-surface-500">No spends logged today</span>
+              )}
+            </p>
           </div>
         </div>
 
         {/* Center: Discretionary Spend */}
-        <div className="hidden md:flex items-center gap-2">
+        <div className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white/[0.03] border border-white/[0.06]">
           <TrendingDown size={14} className="text-expense-400" />
-          <span className="text-xs font-medium text-surface-400">Total Spend</span>
+          <span className="text-xs font-medium text-surface-400">Month Spend</span>
           <span className="text-sm font-bold text-expense-400">
             ₹{discretionarySpend.toLocaleString('en-IN')}
           </span>

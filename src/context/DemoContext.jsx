@@ -97,6 +97,12 @@ export function DemoProvider({ children }) {
     [setTransactions]
   );
 
+  const updateTransaction = useCallback((id, updates) => {
+    setTransactions((prev) =>
+      prev.map((t) => (t.id === id ? { ...t, ...updates } : t))
+    );
+  }, [setTransactions]);
+
   const addIncome = useCallback((payload) => {
     const newEntry = { id: Date.now(), ...payload };
     setIncome((prev) => [newEntry, ...prev]);
@@ -113,11 +119,12 @@ export function DemoProvider({ children }) {
       transactions,
       income,
       addTransaction,
+      updateTransaction,
       deleteTransaction,
       addIncome,
       deleteIncome,
     }),
-    [transactions, income, addTransaction, deleteTransaction, addIncome, deleteIncome]
+    [transactions, income, addTransaction, updateTransaction, deleteTransaction, addIncome, deleteIncome]
   );
 
   return (

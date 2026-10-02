@@ -221,3 +221,189 @@ export function computeMonthStats(txns, income, monthStart, categories, opts) {
 function r2(n) {
   return Math.round(n * 100) / 100;
 }
+
+/**
+ * Get the range of months from the earliest transaction/income to the previous completed month.
+ * Returns an array of Date objects (month starts), most recent first.
+ */
+export function getActiveMonthRange(txns, income) {
+  const allDates = [
+    ...txns.map((t) => new Date(t.date)),
+    ...income.map((i) => new Date(i.date)),
+  ].filter((d) => !isNaN(d.getTime()));
+
+  if (allDates.length === 0) return [];
+
+  const earliest = new Date(Math.min(...allDates));
+  const now = new Date();
+
+  // Previous completed month
+  const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+
+  // If earliest is after last month, no completed months yet
+  if (earliest > new Date(lastMonth.getFullYear(), lastMonth.getMonth() + 1, 0)) {
+    return [];
+  }
+
+  const months = [];
+  let cursor = new Date(lastMonth.getFullYear(), lastMonth.getMonth(), 1);
+  const start = new Date(earliest.getFullYear(), earliest.getMonth(), 1);
+
+  while (cursor >= start) {
+    months.push(new Date(cursor));
+    cursor = new Date(cursor.getFullYear(), cursor.getMonth() - 1, 1);
+  }
+
+  return months; // Most recent first
+}
+
+/**
+ * Compute anomaly insights for the current month vs historical data.
+ * Returns an array of { type, severity, message } objects.
+ * Types: 'velocity_spike', 'category_anomaly', 'pacing_alert'
+ * Severity: 'warning', 'danger', 'info'
+ */
+export function computeAnomalyInsights(allTxns, allIncome, categories, catOpts) {
+  const insights = [];
+  const now = new Date();
+  const currentMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+
+  const currentMonthTxns = allTxns.filter((t) => isInMonth(t.date, currentMonthStart));
+
+  if (currentMonthTxns.length === 0) return insights;
+
+  // --- 1. Velocity Spike: today's txn count vs daily average this month ---
+  const today = now.getDate();
+  const todayTxns = currentMonthTxns.filter((t) => new Date(t.date).getDate() === today);
+  const elapsed = elapsedDaysInMonth(currentMonthStart);
+  const avgDailyTxns = elapsed > 1 ? currentMonthTxns.length / elapsed : currentMonthTxns.length;
+
+  if (todayTxns.length >= 4 && todayTxns.length >= avgDailyTxns * 2) {
+    insights.push({
+      type: 'velocity_spike',
+      severity: 'warning',
+      icon: '⚡',
+      message: `You've made ${todayTxns.length} transactions today. Your daily average is ${avgDailyTxns.toFixed(1)}.`,
+    });
+  }
+
+  // --- 2. Category Anomaly: current week vs 3-month average for top categories ---
+  // Get past 3 months
+  const past3Months = [1, 2, 3].map(
+    (i) => new Date(now.getFullYear(), now.getMonth() - i, 1)
+  );
+
+  // Build per-category weekly average from past 3 months
+  const catWeeklyAvg = {};
+  const totalWeeks = past3Months.reduce((sum, m) => sum + daysInMonth(m) / 7, 0);
+
+  past3Months.forEach((monthStart) => {
+    const monthTxns = allTxns.filter((t) => isInMonth(t.date, monthStart));
+    monthTxns.forEach((t) => {
+      const catId = t.category_id;
+      catWeeklyAvg[catId] = (catWeeklyAvg[catId] || 0) + Number(t.amount);
+    });
+  });
+
+  // Convert totals to weekly averages
+  Object.keys(catWeeklyAvg).forEach((catId) => {
+    catWeeklyAvg[catId] = totalWeeks > 0 ? catWeeklyAvg[catId] / totalWeeks : 0;
+  });
+
+  // Current week's spend per category (last 7 days)
+  const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+  const thisWeekTxns = currentMonthTxns.filter((t) => new Date(t.date) >= weekAgo);
+  const catThisWeek = {};
+  thisWeekTxns.forEach((t) => {
+    catThisWeek[t.category_id] = (catThisWeek[t.category_id] || 0) + Number(t.amount);
+  });
+
+  // Exclude non-discretionary categories
+  const excludedCatIds = [
+    ...(catOpts.fixedBillsCatIds || []),
+    ...(catOpts.savingsCatIds || []),
+    ...(catOpts.investmentCatIds || []),
+    ...(catOpts.ccPaymentCatIds || []),
+  ];
+
+  Object.entries(catThisWeek).forEach(([catId, weekSpend]) => {
+    const numCatId = Number(catId);
+    if (excludedCatIds.includes(numCatId)) return;
+
+    const avg = catWeeklyAvg[catId] || 0;
+    if (avg > 0 && weekSpend > avg * 1.4) {
+      const pctOver = Math.round(((weekSpend - avg) / avg) * 100);
+      const catName = categories.find((c) => c.id === numCatId)?.name || 'Unknown';
+      if (pctOver >= 30) {
+        insights.push({
+          type: 'category_anomaly',
+          severity: pctOver >= 80 ? 'danger' : 'warning',
+          icon: '📊',
+          message: `You've spent ${pctOver}% more on '${catName}' this week than your 3-month weekly average.`,
+        });
+      }
+    }
+  });
+
+  // --- 3. Pacing Alert: % month elapsed vs % discretionary spend consumed ---
+  const totalDays = daysInMonth(currentMonthStart);
+  const pctMonthElapsed = (elapsed / totalDays) * 100;
+
+  // Get average monthly discretionary from past 3 months
+  let totalPastDiscretionary = 0;
+  let activeMonths = 0;
+  past3Months.forEach((monthStart) => {
+    const monthTxns = allTxns.filter((t) => isInMonth(t.date, monthStart));
+    if (monthTxns.length === 0) return;
+    activeMonths++;
+    const disc = monthTxns
+      .filter((t) => !excludedCatIds.includes(t.category_id))
+      .reduce((s, t) => s + Number(t.amount), 0);
+    totalPastDiscretionary += disc;
+  });
+
+  const avgMonthlyDiscretionary = activeMonths > 0 ? totalPastDiscretionary / activeMonths : 0;
+
+  if (avgMonthlyDiscretionary > 0) {
+    const currentDiscretionary = currentMonthTxns
+      .filter((t) => !excludedCatIds.includes(t.category_id))
+      .reduce((s, t) => s + Number(t.amount), 0);
+    const pctSpendConsumed = (currentDiscretionary / avgMonthlyDiscretionary) * 100;
+
+    // Alert if spend % is significantly ahead of time %
+    if (pctSpendConsumed > pctMonthElapsed * 1.3 && pctSpendConsumed > 50) {
+      insights.push({
+        type: 'pacing_alert',
+        severity: pctSpendConsumed > 90 ? 'danger' : 'warning',
+        icon: '🚨',
+        message: `You are ${Math.round(pctMonthElapsed)}% through the month but have consumed ${Math.round(pctSpendConsumed)}% of your usual discretionary spend.`,
+      });
+    }
+  }
+
+  return insights;
+}
+
+/**
+ * Compute salary runway projection.
+ * @param {number} salaryRemaining - Current salary remaining
+ * @param {number} dailyBurnRate - Average daily spend from salary account this month
+ * @returns {{ runwayDate: Date|null, daysLeft: number, isBeforeMonthEnd: boolean, burnRate: number }}
+ */
+export function computeSalaryRunway(salaryRemaining, dailyBurnRate) {
+  const now = new Date();
+  const totalDays = daysInMonth(new Date(now.getFullYear(), now.getMonth(), 1));
+  const lastDayOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+
+  if (dailyBurnRate <= 0 || salaryRemaining <= 0) {
+    return { runwayDate: null, daysLeft: 0, isBeforeMonthEnd: salaryRemaining <= 0, burnRate: dailyBurnRate };
+  }
+
+  const daysLeft = Math.floor(salaryRemaining / dailyBurnRate);
+  const runwayDate = new Date(now);
+  runwayDate.setDate(runwayDate.getDate() + daysLeft);
+
+  const isBeforeMonthEnd = runwayDate < lastDayOfMonth;
+
+  return { runwayDate, daysLeft, isBeforeMonthEnd, burnRate: r2(dailyBurnRate) };
+}

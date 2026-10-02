@@ -6,7 +6,7 @@ import { useDemoData } from '../../context/DemoContext';
 import CurrencyInput from '../shared/CurrencyInput';
 import toast from 'react-hot-toast';
 import { format } from 'date-fns';
-import { CreditCard, ArrowRightLeft } from 'lucide-react';
+import { CreditCard, ArrowRightLeft, Pencil, Plus, X, RotateCcw } from 'lucide-react';
 
 const toLocalISOString = (localDateTimeStr) => {
   if (!localDateTimeStr) return null;
@@ -19,7 +19,7 @@ const toLocalISOString = (localDateTimeStr) => {
   return `${localDateTimeStr}:00${sign}${offsetHours}:${offsetMin}`;
 };
 
-export default function ExpenseForm({ onSaved }) {
+export default function ExpenseForm({ onSaved, editingTransaction, onCancelEdit, prefill }) {
   const { categories, accounts, creditCards, getSubcategoriesForCategory, getCategoryByName } = useApp();
   const { isAuthenticated } = useAuth();
   const demoData = useDemoData();
@@ -47,10 +47,73 @@ export default function ExpenseForm({ onSaved }) {
   // Get filtered subcategories
   const filteredSubcategories = categoryId ? getSubcategoriesForCategory(Number(categoryId)) : [];
 
-  // Reset subcategory when category changes
+  // Reset subcategory only if current subcategory is not valid for category
   useEffect(() => {
-    setSubcategoryId('');
-  }, [categoryId]);
+    if (subcategoryId) {
+      const valid = getSubcategoriesForCategory(Number(categoryId)).some(
+        (s) => s.id === Number(subcategoryId)
+      );
+      if (!valid) {
+        setSubcategoryId('');
+      }
+    }
+  }, [categoryId, getSubcategoriesForCategory, subcategoryId]);
+
+  // Sync state when editing a transaction
+  useEffect(() => {
+    if (editingTransaction) {
+      if (editingTransaction.date) {
+        try {
+          setDate(format(new Date(editingTransaction.date), "yyyy-MM-dd'T'HH:mm"));
+        } catch {
+          setDate(format(new Date(), "yyyy-MM-dd'T'HH:mm"));
+        }
+      }
+      setCategoryId(String(editingTransaction.category_id || ''));
+      setSubcategoryId(editingTransaction.subcategory_id ? String(editingTransaction.subcategory_id) : '');
+      setAmount(Number(editingTransaction.amount) || 0);
+      setPaymentMethod(editingTransaction.payment_method || 'Salary Account');
+      setCreditCardId(editingTransaction.credit_card_id ? String(editingTransaction.credit_card_id) : '');
+      setAccountId(editingTransaction.account_id ? String(editingTransaction.account_id) : '');
+      setCcPaymentType(editingTransaction.cc_payment_type || '');
+
+      const rawNotes = editingTransaction.notes || '';
+      const savingsMatch = rawNotes.match(/\[savings_to:([^\]]+)\]/);
+      if (savingsMatch) {
+        setSavingsTargetId(savingsMatch[1]);
+        setNotes(rawNotes.replace(/\[savings_to:[^\]]+\]\s*—?\s*/, ''));
+      } else {
+        setSavingsTargetId('');
+        setNotes(rawNotes);
+      }
+      setDescription('');
+    }
+  }, [editingTransaction]);
+
+  // Sync state when prefilling from repeat button
+  useEffect(() => {
+    if (prefill) {
+      setDate(format(new Date(), "yyyy-MM-dd'T'HH:mm"));
+      setCategoryId(String(prefill.category_id || ''));
+      setSubcategoryId(prefill.subcategory_id ? String(prefill.subcategory_id) : '');
+      setAmount(0);
+      setPaymentMethod(prefill.payment_method || 'Salary Account');
+      setCreditCardId(prefill.credit_card_id ? String(prefill.credit_card_id) : '');
+      setAccountId(prefill.account_id ? String(prefill.account_id) : '');
+      setCcPaymentType(prefill.cc_payment_type || '');
+
+      const rawNotes = prefill.notes || '';
+      const savingsMatch = rawNotes.match(/\[savings_to:([^\]]+)\]/);
+      if (savingsMatch) {
+        setSavingsTargetId(savingsMatch[1]);
+        setNotes(rawNotes.replace(/\[savings_to:[^\]]+\]\s*—?\s*/, ''));
+      } else {
+        setSavingsTargetId('');
+        setNotes(rawNotes);
+      }
+      setDescription('');
+    }
+  }, [prefill]);
 
   // CC Payment mode: adapt the form
   useEffect(() => {
@@ -118,15 +181,28 @@ export default function ExpenseForm({ onSaved }) {
         notes: [savingsPrefix, description, notes].filter(Boolean).join(' — ') || null,
       };
 
-      if (isAuthenticated) {
-        const { error } = await supabase.from('transactions').insert(payload);
-        if (error) throw error;
+      if (editingTransaction) {
+        if (isAuthenticated) {
+          const { error } = await supabase
+            .from('transactions')
+            .update(payload)
+            .eq('id', editingTransaction.id);
+          if (error) throw error;
+        } else {
+          demoData.updateTransaction(editingTransaction.id, payload);
+        }
+        toast.success('Transaction updated!');
+        onCancelEdit?.();
       } else {
-        demoData.addTransaction(payload);
+        if (isAuthenticated) {
+          const { error } = await supabase.from('transactions').insert(payload);
+          if (error) throw error;
+        } else {
+          demoData.addTransaction(payload);
+        }
+        toast.success('Transaction added!');
+        resetForm();
       }
-
-      toast.success('Transaction added!');
-      resetForm();
       onSaved?.();
     } catch (err) {
       toast.error(err.message || 'Failed to save transaction');
@@ -137,6 +213,27 @@ export default function ExpenseForm({ onSaved }) {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
+      {/* Editing Mode Indicator Banner */}
+      {editingTransaction && (
+        <div className="flex items-center justify-between p-3 rounded-xl bg-accent-500/10 border border-accent-500/25 text-accent-300 text-xs font-semibold animate-fade-in">
+          <div className="flex items-center gap-2">
+            <Pencil size={14} className="text-accent-400" />
+            <span>Editing Transaction #{editingTransaction.id}</span>
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              resetForm();
+              onCancelEdit?.();
+            }}
+            className="text-surface-400 hover:text-white transition-colors p-1"
+            title="Cancel editing"
+          >
+            <X size={14} />
+          </button>
+        </div>
+      )}
+
       {/* CC Payment Toggle */}
       <button
         type="button"
@@ -324,19 +421,48 @@ export default function ExpenseForm({ onSaved }) {
         />
       </div>
 
-      {/* Submit */}
-      <button type="submit" disabled={saving} className="btn-primary w-full !py-3.5 !text-sm">
-        {saving ? (
-          <span className="flex items-center justify-center gap-2">
-            <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-            Saving...
-          </span>
-        ) : isCCPayment ? (
-          'Log CC Payment'
-        ) : (
-          'Add Expense'
+      {/* Submit Button & Cancel Action */}
+      <div className="space-y-2">
+        <button
+          type="submit"
+          disabled={saving}
+          className={`w-full py-3.5 rounded-xl font-bold text-sm shadow-lg transition-all duration-200 flex items-center justify-center gap-2 ${
+            editingTransaction
+              ? 'bg-gradient-to-r from-accent-500 to-indigo-600 hover:from-accent-600 hover:to-indigo-700 text-white shadow-accent/25'
+              : 'btn-primary'
+          } disabled:opacity-50`}
+        >
+          {saving ? (
+            <span className="flex items-center justify-center gap-2">
+              <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+              {editingTransaction ? 'Updating in Database...' : 'Saving...'}
+            </span>
+          ) : editingTransaction ? (
+            <>
+              <Pencil size={15} />
+              Update Transaction
+            </>
+          ) : isCCPayment ? (
+            'Log CC Payment'
+          ) : (
+            'Add Expense'
+          )}
+        </button>
+
+        {editingTransaction && (
+          <button
+            type="button"
+            onClick={() => {
+              resetForm();
+              onCancelEdit?.();
+            }}
+            className="w-full py-2.5 rounded-xl font-semibold text-xs text-surface-400 hover:text-white bg-white/[0.04] hover:bg-white/[0.08] transition-colors flex items-center justify-center gap-1.5"
+          >
+            <X size={14} />
+            Cancel Edit
+          </button>
         )}
-      </button>
+      </div>
     </form>
   );
 }

@@ -25,6 +25,9 @@ import {
   ArrowUpRight,
   ArrowDownRight,
   Loader2,
+  FileText,
+  AlertTriangle,
+  X,
 } from 'lucide-react';
 import {
   PieChart,
@@ -52,6 +55,8 @@ import {
   fmtINR,
   isInMonth,
   daysInMonth,
+  getActiveMonthRange,
+  computeAnomalyInsights,
 } from '../utils/stats';
 
 const CHART_COLORS = [
@@ -68,7 +73,9 @@ export default function Analytics() {
   const [allTxns, setAllTxns] = useState([]);
   const [allIncome, setAllIncome] = useState([]);
   const [loading, setLoading] = useState(true);
+  // Auto-open Reports tab if current month has < 3 transactions
   const [activeTab, setActiveTab] = useState('monthly');
+  const [tabInitialized, setTabInitialized] = useState(false);
 
   // Monthly tab state
   const [searchQuery, setSearchQuery] = useState('');
@@ -234,6 +241,22 @@ export default function Analytics() {
   useEffect(() => {
     fetchLedger();
   }, [fetchLedger]);
+
+  // Auto-open Reports tab if current month has < 3 transactions and there are past months with data
+  useEffect(() => {
+    if (tabInitialized || loading) return;
+    const now = new Date();
+    const currentMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+    const currentMonthTxns = allTxns.filter((t) => {
+      const d = new Date(t.date);
+      return d.getFullYear() === currentMonthStart.getFullYear() && d.getMonth() === currentMonthStart.getMonth();
+    });
+    const pastMonths = getActiveMonthRange(allTxns, allIncome);
+    if (currentMonthTxns.length < 3 && pastMonths.length > 0) {
+      setActiveTab('reports');
+    }
+    setTabInitialized(true);
+  }, [allTxns, allIncome, loading, tabInitialized]);
 
   // ─── Category ID lookups ──────────────────────────────────────
   const catOpts = useMemo(() => {
@@ -540,6 +563,17 @@ export default function Analytics() {
           <CalendarRange size={15} />
           Yearly
         </button>
+        <button
+          onClick={() => setActiveTab('reports')}
+          className={`flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-semibold transition-all duration-200 ${
+            activeTab === 'reports'
+              ? 'bg-gradient-to-r from-accent-500/20 to-accent-600/20 text-accent-300 shadow-lg shadow-accent-500/10'
+              : 'text-surface-400 hover:text-surface-200 hover:bg-white/[0.04]'
+          }`}
+        >
+          <FileText size={15} />
+          Reports
+        </button>
       </div>
 
       {activeTab === 'monthly' ? (
@@ -577,8 +611,11 @@ export default function Analytics() {
           totalRecords={ledgerTotalCount}
           hasQuery={searchQuery.trim() !== '' || dateFrom !== '' || dateTo !== '' || filterCategory !== ''}
           ledgerLoading={ledgerLoading}
+          allTxns={allTxns}
+          allIncome={allIncome}
+          catOpts={catOpts}
         />
-      ) : (
+      ) : activeTab === 'yearly' ? (
         <YearlyView
           yearlyStats={yearlyStats}
           annualAgg={annualAgg}
@@ -588,6 +625,15 @@ export default function Analytics() {
           fmt={fmt}
           GlassTooltip={GlassTooltip}
           allTxns={allTxns}
+        />
+      ) : (
+        <ReportsView
+          allTxns={allTxns}
+          allIncome={allIncome}
+          categories={categories}
+          catOpts={catOpts}
+          accounts={accounts}
+          fmt={fmt}
         />
       )}
     </div>
@@ -606,11 +652,53 @@ function MonthlyView({
   categories, getCategoryName, getSubcategoryName, getAccountName, getCCName,
   handleDeleteTxn, fmt, DonutTooltip, GlassTooltip,
   totalRecords, hasQuery, ledgerLoading,
+  allTxns, allIncome, catOpts,
 }) {
   const stats = currentMonthStats;
+  const [dismissedInsights, setDismissedInsights] = useState([]);
+
+  // Compute anomaly insights
+  const insights = useMemo(() => {
+    if (!allTxns || !categories || categories.length === 0 || !catOpts) return [];
+    return computeAnomalyInsights(allTxns, allIncome || [], categories, catOpts);
+  }, [allTxns, allIncome, categories, catOpts]);
+
+  const visibleInsights = insights.filter((_, i) => !dismissedInsights.includes(i));
 
   return (
     <div className="space-y-6">
+      {/* Anomaly Insights Strip */}
+      {visibleInsights.length > 0 && (
+        <div className="space-y-2">
+          {visibleInsights.map((insight, idx) => {
+            const originalIdx = insights.indexOf(insight);
+            return (
+              <div
+                key={originalIdx}
+                className={`flex items-start gap-3 p-3 rounded-xl border transition-all duration-300 animate-fade-in ${
+                  insight.severity === 'danger'
+                    ? 'bg-expense/10 border-expense-400/20'
+                    : 'bg-amber-500/10 border-amber-400/20'
+                }`}
+              >
+                <span className="text-lg flex-shrink-0 mt-0.5">{insight.icon}</span>
+                <p className={`text-sm font-medium flex-1 ${
+                  insight.severity === 'danger' ? 'text-expense-300' : 'text-amber-300'
+                }`}>
+                  {insight.message}
+                </p>
+                <button
+                  onClick={() => setDismissedInsights((prev) => [...prev, originalIdx])}
+                  className="text-surface-500 hover:text-surface-300 transition-colors flex-shrink-0 mt-0.5"
+                >
+                  <X size={14} />
+                </button>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
       {/* Month Selector */}
       <div className="flex items-center justify-between">
         <h2 className="text-lg font-bold text-white">Monthly Analytics</h2>
@@ -1368,6 +1456,177 @@ function InsightCard({ label, value, sublabel, color }) {
       <p className="text-[10px] font-semibold text-surface-500 uppercase tracking-wider mb-1.5">{label}</p>
       <p className={`text-base font-bold ${textColor}`}>{value}</p>
       {sublabel && <p className="text-[10px] text-surface-400 mt-0.5">{sublabel}</p>}
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════
+// REPORTS TAB — Monthly Report Cards
+// ═══════════════════════════════════════════════════════════════
+function ReportsView({ allTxns, allIncome, categories, catOpts, accounts, fmt }) {
+  const salaryAccountIds = useMemo(() => {
+    return accounts.filter((a) => a.is_salary_default).map((a) => a.id);
+  }, [accounts]);
+
+  const filteredIncome = useMemo(() => {
+    return allIncome.filter((i) => i.account_id && salaryAccountIds.includes(Number(i.account_id)));
+  }, [allIncome, salaryAccountIds]);
+
+  // Get all completed months (most recent first)
+  const reportMonths = useMemo(() => {
+    return getActiveMonthRange(allTxns, allIncome);
+  }, [allTxns, allIncome]);
+
+  // Compute stats for each month
+  const reportStats = useMemo(() => {
+    if (categories.length === 0) return [];
+    return reportMonths.map((monthStart) =>
+      computeMonthStats(allTxns, filteredIncome, monthStart, categories, catOpts)
+    );
+  }, [reportMonths, allTxns, filteredIncome, categories, catOpts]);
+
+  if (reportMonths.length === 0) {
+    return (
+      <div className="glass-card-static p-12">
+        <EmptyState
+          icon={FileText}
+          title="No completed months yet"
+          description="Report cards will appear here once a month of data is completed. Keep logging!"
+        />
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <h2 className="text-lg font-bold text-white">Monthly Report Cards</h2>
+        <span className="text-xs text-surface-500 font-medium">
+          {reportMonths.length} month{reportMonths.length > 1 ? 's' : ''} of data
+        </span>
+      </div>
+
+      <div className="space-y-4">
+        {reportStats.map((stats, idx) => {
+          const prevStats = idx < reportStats.length - 1 ? reportStats[idx + 1] : null;
+          const momPct = prevStats && prevStats.totalExpenses > 0
+            ? ((stats.totalExpenses - prevStats.totalExpenses) / prevStats.totalExpenses) * 100
+            : null;
+
+          // Comparison badge: green if spending down, red if up, amber if similar
+          let badge = { emoji: '🟢', text: 'Improved', color: 'text-income-400 bg-income/10' };
+          if (momPct !== null) {
+            if (momPct > 10) {
+              badge = { emoji: '🔴', text: `+${momPct.toFixed(0)}% vs prev`, color: 'text-expense-400 bg-expense/10' };
+            } else if (momPct > -5) {
+              badge = { emoji: '🟡', text: `${momPct > 0 ? '+' : ''}${momPct.toFixed(0)}% vs prev`, color: 'text-amber-400 bg-amber-500/10' };
+            } else {
+              badge = { emoji: '🟢', text: `${momPct.toFixed(0)}% vs prev`, color: 'text-income-400 bg-income/10' };
+            }
+          }
+
+          const topCats = stats.top3Categories || [];
+
+          return (
+            <div
+              key={stats.monthStart.toISOString()}
+              className="glass-card-static p-5 hover:bg-white/[0.04] transition-all duration-200"
+            >
+              {/* Header */}
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-accent/10">
+                    <FileText size={18} className="text-accent-400" />
+                  </div>
+                  <div>
+                    <h3 className="text-base font-bold text-white">
+                      {format(stats.monthStart, 'MMMM yyyy')}
+                    </h3>
+                    <p className="text-[10px] text-surface-500">
+                      {stats.txnCount} transactions logged
+                    </p>
+                  </div>
+                </div>
+                {momPct !== null && (
+                  <span className={`text-xs font-semibold px-3 py-1.5 rounded-lg ${badge.color}`}>
+                    {badge.emoji} {badge.text}
+                  </span>
+                )}
+              </div>
+
+              {/* Main metrics grid */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-4">
+                <div>
+                  <p className="text-[10px] text-surface-500 font-semibold uppercase tracking-wider mb-1">Income</p>
+                  <p className="text-sm font-bold text-income-400">₹{fmt(stats.totalIncome)}</p>
+                </div>
+                <div>
+                  <p className="text-[10px] text-surface-500 font-semibold uppercase tracking-wider mb-1">Expenses</p>
+                  <p className="text-sm font-bold text-expense-400">₹{fmt(stats.totalExpenses)}</p>
+                </div>
+                <div>
+                  <p className="text-[10px] text-surface-500 font-semibold uppercase tracking-wider mb-1">Net Saved</p>
+                  <p className={`text-sm font-bold ${stats.net >= 0 ? 'text-income-400' : 'text-expense-400'}`}>
+                    {stats.net < 0 ? '-' : ''}₹{fmt(stats.net)}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-[10px] text-surface-500 font-semibold uppercase tracking-wider mb-1">Savings Rate</p>
+                  <p className={`text-sm font-bold ${stats.savingsRate >= 20 ? 'text-income-400' : stats.savingsRate >= 0 ? 'text-accent-400' : 'text-expense-400'}`}>
+                    {stats.savingsRate.toFixed(1)}%
+                  </p>
+                </div>
+              </div>
+
+              {/* Top Categories */}
+              {topCats.length > 0 && (
+                <div className="flex flex-wrap items-center gap-2 mb-4 pb-4 border-b border-white/[0.06]">
+                  <span className="text-[10px] text-surface-500 font-semibold uppercase tracking-wider">Top:</span>
+                  {topCats.map((cat, ci) => (
+                    <span
+                      key={cat.id}
+                      className="inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-lg bg-white/[0.04] border border-white/[0.06]"
+                    >
+                      <div
+                        className="w-2 h-2 rounded-full flex-shrink-0"
+                        style={{ background: CHART_COLORS[ci % CHART_COLORS.length] }}
+                      />
+                      <span className="text-surface-300">{cat.name}</span>
+                      <span className="text-surface-500 font-medium">₹{Math.round(cat.amount).toLocaleString('en-IN')}</span>
+                    </span>
+                  ))}
+                </div>
+              )}
+
+              {/* Secondary KPIs */}
+              <div className="grid grid-cols-3 sm:grid-cols-5 gap-3">
+                <div className="text-center">
+                  <p className="text-[10px] text-surface-500 mb-0.5">Avg Daily</p>
+                  <p className="text-xs font-bold text-surface-300">₹{fmt(stats.meanDaily)}</p>
+                </div>
+                <div className="text-center">
+                  <p className="text-[10px] text-surface-500 mb-0.5">Max Txn</p>
+                  <p className="text-xs font-bold text-surface-300">₹{fmt(stats.maxTxn)}</p>
+                </div>
+                <div className="text-center">
+                  <p className="text-[10px] text-surface-500 mb-0.5">CC Dependency</p>
+                  <p className={`text-xs font-bold ${stats.ccDependency > 50 ? 'text-expense-400' : 'text-surface-300'}`}>
+                    {stats.ccDependency.toFixed(0)}%
+                  </p>
+                </div>
+                <div className="text-center hidden sm:block">
+                  <p className="text-[10px] text-surface-500 mb-0.5">Weekend Avg</p>
+                  <p className="text-xs font-bold text-surface-300">₹{fmt(stats.avgWeekendDaily)}/day</p>
+                </div>
+                <div className="text-center hidden sm:block">
+                  <p className="text-[10px] text-surface-500 mb-0.5">Discretionary</p>
+                  <p className="text-xs font-bold text-accent-400">₹{fmt(stats.discretionary)}</p>
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }

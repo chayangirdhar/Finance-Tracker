@@ -8,6 +8,7 @@ import AccountForm from '../components/forms/AccountForm';
 import CreditCardForm from '../components/forms/CreditCardForm';
 import EmptyState from '../components/shared/EmptyState';
 import toast from 'react-hot-toast';
+import { format } from 'date-fns';
 import {
   CreditCard,
   Landmark,
@@ -21,8 +22,11 @@ import {
   Coins,
   PiggyBank,
   CheckSquare,
-  Square
+  Square,
+  Timer,
+  AlertTriangle,
 } from 'lucide-react';
+import { computeSalaryRunway, daysInMonth, elapsedDaysInMonth } from '../utils/stats';
 
 const getBillingCycle = (dueDayVal) => {
   const now = new Date();
@@ -317,6 +321,51 @@ export default function FinancialHealth() {
           </p>
         </div>
       </div>
+
+      {/* Salary Runway Forecast */}
+      {salaryAccounts.length > 0 && totalSalaryCredited > 0 && (() => {
+        const now = new Date();
+        const currentMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+        const elapsed = elapsedDaysInMonth(currentMonthStart);
+        const dailyBurnRate = elapsed > 0 ? totalSalarySpent / elapsed : 0;
+        const runway = computeSalaryRunway(salaryRemaining, dailyBurnRate);
+        const totalDays = daysInMonth(currentMonthStart);
+        const daysRemaining = totalDays - now.getDate();
+
+        if (dailyBurnRate <= 0) return null;
+
+        return (
+          <div className={`glass-card-static p-4 flex items-start gap-4 border ${
+            runway.isBeforeMonthEnd
+              ? 'border-expense-400/20 bg-expense/5'
+              : 'border-income-400/20 bg-income/5'
+          }`}>
+            <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${
+              runway.isBeforeMonthEnd ? 'bg-expense/10' : 'bg-income/10'
+            }`}>
+              {runway.isBeforeMonthEnd
+                ? <AlertTriangle size={18} className="text-expense-400" />
+                : <Timer size={18} className="text-income-400" />
+              }
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-xs font-semibold text-surface-500 uppercase tracking-wider mb-1">Salary Runway</p>
+              <p className={`text-sm font-bold ${
+                runway.isBeforeMonthEnd ? 'text-expense-400' : 'text-income-400'
+              }`}>
+                {runway.runwayDate
+                  ? `At ₹${fmt(runway.burnRate)}/day burn rate, salary lasts until ${format(runway.runwayDate, 'd MMM')}`
+                  : 'Salary already exhausted'
+                }
+              </p>
+              <p className="text-[10px] text-surface-500 mt-1">
+                {runway.daysLeft} days of runway · {daysRemaining} days left in month
+                {runway.isBeforeMonthEnd && ' · ⚠️ Won\'t last the month'}
+              </p>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* Quick Health Insights */}
       <div className="glass-card-static p-4">
